@@ -131,6 +131,7 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 			LOGE("connect failed");
 			close(self->sockfd);
 			self->sockfd = -1;
+			i = i->ai_next;
 			continue;
 		}
 
