@@ -306,6 +306,7 @@ void net_socket_close(net_socket_t** _self)
 int net_socket_send(net_socket_t* self, const void* data, int len)
 {
 	assert(self);
+	assert(data);
 	LOGD("debug len=%i", len);
 
 	int left        = len;
@@ -327,6 +328,7 @@ int net_socket_send(net_socket_t* self, const void* data, int len)
 int net_socket_recv(net_socket_t* self, void* data, int len)
 {
 	assert(self);
+	assert(data);
 	LOGD("debug len=%i", len);
 
 	return recv(self->sockfd, data, len, 0);
