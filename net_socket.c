@@ -280,6 +280,14 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 	return NULL;
 }
 
+int net_socket_shutdown(net_socket_t* self, int how)
+{
+	assert(self);
+	LOGD("debug how=%i", how);
+
+	return shutdown(self->sockfd, how);
+}
+
 void net_socket_close(net_socket_t** _self)
 {
 	// *_self can be NULL

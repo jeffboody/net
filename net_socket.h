@@ -26,6 +26,11 @@
 
 #define NET_SOCKET_TCP 0
 
+// shutdown "how"
+#define NET_SOCKET_SHUT_RD   0
+#define NET_SOCKET_SHUT_WR   1
+#define NET_SOCKET_SHUT_RDWR 2
+
 typedef struct
 {
 	int sockfd;
@@ -34,6 +39,7 @@ typedef struct
 net_socket_t* net_socket_connect(const char* addr, const char* port, int type);
 net_socket_t* net_socket_listen(const char* port, int type, int backlog);
 net_socket_t* net_socket_accept(net_socket_t* self);
+int           net_socket_shutdown(net_socket_t* self, int how);
 void          net_socket_close(net_socket_t** _self);
 int           net_socket_send(net_socket_t* self, const void* data, int len);
 int           net_socket_recv(net_socket_t* self, void* data, int len);
