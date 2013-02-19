@@ -51,15 +51,14 @@ int main(int argc, char** argv)
 
 	int cnt_recv;
 	int cnt_send;
-	char  buf_recv[256];
-	char* buf_send;
+	char buf[256];
 	while(1)
 	{
-		cnt_recv = net_socket_recv(a, buf_recv, 255);
+		cnt_recv = net_socket_recv(a, buf, 255);
 		if(cnt_recv > 0)
 		{
-			buf_recv[cnt_recv] = '\0';
-			printf("%s", buf_recv);
+			buf[cnt_recv] = '\0';
+			printf("%s", buf);
 		}
 		else
 		{
@@ -67,19 +66,11 @@ int main(int argc, char** argv)
 			goto fail_echo;
 		}
 
-		cnt_send = cnt_recv;
-		buf_send = buf_recv;
-		while(cnt_send > 0)
+		cnt_send = net_socket_send(a, buf, cnt_recv);
+		if(cnt_send != cnt_recv)
 		{
-			int len = cnt_send;
-			cnt_send = net_socket_send(a, buf_send, len);
-			if(cnt_send <= 0)
-			{
-				// failed to send
-				goto fail_echo;
-			}
-			cnt_send = len - cnt_send;
-			buf_send = buf_send + cnt_send;
+			// failed to send
+			goto fail_echo;
 		}
 	}
 
