@@ -122,6 +122,7 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 		self->sockfd = socket(i->ai_family, i->ai_socktype, i->ai_protocol);
 		if(self->sockfd == -1)
 		{
+			LOGE("socket failed");
 			i = i->ai_next;
 			continue;
 		}
@@ -150,7 +151,6 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 
 	// failure
 	fail_socket:
-		close(self->sockfd);
 	fail_getaddrinfo:
 		free(self);
 	return NULL;
@@ -200,6 +200,7 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 		self->sockfd = socket(i->ai_family, i->ai_socktype, i->ai_protocol);
 		if(self->sockfd == -1)
 		{
+			LOGE("socket failed");
 			i = i->ai_next;
 			continue;
 		}
@@ -241,8 +242,8 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 
 	// failure
 	fail_listen:
-	fail_socket:
 		close(self->sockfd);
+	fail_socket:
 	fail_getaddrinfo:
 		free(self);
 	return NULL;
@@ -285,7 +286,12 @@ int net_socket_shutdown(net_socket_t* self, int how)
 	assert(self);
 	LOGD("debug how=%i", how);
 
-	return shutdown(self->sockfd, how);
+	int ret = shutdown(self->sockfd, how);
+	if(ret == -1)
+	{
+		LOGE("shutdown failed");
+	}
+	return ret;
 }
 
 void net_socket_close(net_socket_t** _self)
@@ -317,6 +323,7 @@ int net_socket_send(net_socket_t* self, const void* data, int len)
 		if(sent <= 0)
 		{
 			// failed to send
+			LOGE("send failed");
 			return len - left;
 		}
 		left = left - sent;
@@ -331,5 +338,10 @@ int net_socket_recv(net_socket_t* self, void* data, int len)
 	assert(data);
 	LOGD("debug len=%i", len);
 
-	return recv(self->sockfd, data, len, 0);
+	int ret = recv(self->sockfd, data, len, 0);
+	if(ret == -1)
+	{
+		LOGE("recv failed");
+	}
+	return ret;
 }

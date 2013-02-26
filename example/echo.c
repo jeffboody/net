@@ -60,10 +60,15 @@ int main(int argc, char** argv)
 			buf[cnt_recv] = '\0';
 			printf("%s", buf);
 		}
-		else
+		else if(cnt_recv < 0)
 		{
 			// failed to recv
 			goto fail_echo;
+		}
+		else
+		{
+			// normal shutdown
+			break;
 		}
 
 		cnt_send = net_socket_send(a, buf, cnt_recv);
