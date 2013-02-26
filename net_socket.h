@@ -25,6 +25,7 @@
 #define net_socket_H
 
 #define NET_SOCKET_TCP 0
+#define NET_SOCKET_UDP 1
 
 // shutdown "how"
 #define NET_SOCKET_SHUT_RD   0

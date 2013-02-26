@@ -90,6 +90,10 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 	{
 		socktype = SOCK_STREAM;
 	}
+	else if(type == NET_SOCKET_UDP)
+	{
+		socktype = SOCK_DGRAM;
+	}
 	else
 	{
 		LOGE("invalid type=%i", type);
@@ -166,6 +170,10 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 	if(type == NET_SOCKET_TCP)
 	{
 		socktype = SOCK_STREAM;
+	}
+	else if(type == NET_SOCKET_UDP)
+	{
+		socktype = SOCK_DGRAM;
 	}
 	else
 	{
