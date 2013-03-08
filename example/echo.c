@@ -49,30 +49,30 @@ int main(int argc, char** argv)
 		goto fail_accept;
 	}
 
-	int cnt_recv;
-	int cnt_send;
 	char buf[256];
 	while(1)
 	{
-		cnt_recv = net_socket_recv(a, buf, 255);
-		if(cnt_recv > 0)
-		{
-			buf[cnt_recv] = '\0';
-			printf("%s", buf);
-		}
-		else if(cnt_recv < 0)
+		int cnt_recv;
+		net_socket_recv(a, buf, 255, &cnt_recv);
+		if(net_socket_error(a))
 		{
 			// failed to recv
 			goto fail_echo;
 		}
-		else
+		else if(net_socket_connected(a) == 0)
 		{
 			// normal shutdown
 			break;
 		}
+		else
+		{
+			buf[cnt_recv] = '\0';
+			printf("%s", buf);
+		}
 
-		cnt_send = net_socket_send(a, buf, cnt_recv);
-		if(cnt_send != cnt_recv)
+		int cnt_send;
+		net_socket_sendall(a, buf, cnt_recv, &cnt_send);
+		if(net_socket_error(a))
 		{
 			// failed to send
 			goto fail_echo;

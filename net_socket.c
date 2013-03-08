@@ -328,49 +328,94 @@ void net_socket_close(net_socket_t** _self)
 	}
 }
 
-int net_socket_send(net_socket_t* self, const void* data, int len)
+int net_socket_sendall(net_socket_t* self, const void* data, int len, int* sent)
 {
 	assert(self);
 	assert(data);
+	assert(sent);
 	LOGD("debug len=%i", len);
 
 	int left        = len;
 	const void* buf = data;
 	while(left > 0)
 	{
-		int sent = send(self->sockfd, buf, left, 0);
-		if(sent <= 0)
+		int count = send(self->sockfd, buf, left, 0);
+		if(count <= 0)
 		{
-			// failed to send
+			LOGE("send failed");
 			self->error     = 1;
 			self->connected = 0;
-			LOGE("send failed");
-			return len - left;
+			*sent = len - left;
+			return 0;
 		}
-		left = left - sent;
-		buf  = buf + sent;
+		left = left - count;
+		buf  = buf + count;
 	}
-	return len;
+	*sent = len;
+	return 1;
 }
 
-int net_socket_recv(net_socket_t* self, void* data, int len)
+int net_socket_recv(net_socket_t* self, void* data, int len, int* recvd)
 {
 	assert(self);
 	assert(data);
+	assert(recvd);
 	LOGD("debug len=%i", len);
 
-	int ret = recv(self->sockfd, data, len, 0);
-	if(ret == -1)
+	int count = recv(self->sockfd, data, len, 0);
+	if(count == -1)
 	{
-		self->error = 1;
-		self->connected = 0;
 		LOGE("recv failed");
+		self->error     = 1;
+		self->connected = 0;
+		*recvd          = 0;
+		return 0;
 	}
-	else if(ret == 0)
+	else if(count == 0)
 	{
+		// connection closed normally
 		self->connected = 0;
 	}
-	return ret;
+	*recvd = count;
+	return 1;
+}
+
+int net_socket_recvall(net_socket_t* self, void* data, int len, int* recvd)
+{
+	assert(self);
+	assert(data);
+	assert(recvd);
+	LOGD("debug len=%i", len);
+
+	int left  = len;
+	void* buf = data;
+	while(left > 0)
+	{
+		int count = recv(self->sockfd, buf, left, 0);
+		if(count == -1)
+		{
+			LOGE("recv failed");
+			self->error = 1;
+			goto fail_recv;
+		}
+		else if(count == 0)
+		{
+			LOGE("recv closed");
+			goto fail_recv;
+		}
+		left = left - count;
+		buf  = buf + count;
+	}
+
+	// success
+	*recvd = len;
+	return 1;
+
+	// failure
+	fail_recv:
+		self->connected = 0;
+		*recvd          = len - left;
+	return 0;
 }
 
 int net_socket_error(net_socket_t* self)
