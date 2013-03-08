@@ -150,6 +150,9 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 		goto fail_socket;
 	}
 
+	self->error     = 0;
+	self->connected = 1;
+
 	// success
 	return self;
 
@@ -245,6 +248,9 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 		goto fail_listen;
 	}
 
+	self->error     = 0;
+	self->connected = 1;
+
 	// success
 	return self;
 
@@ -278,7 +284,9 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 		goto fail_remote;
 	}
 
-	remote->sockfd = sockfd;
+	remote->sockfd    = sockfd;
+	remote->error     = 0;
+	remote->connected = 1;
 
 	// success
 	return remote;
@@ -297,8 +305,11 @@ int net_socket_shutdown(net_socket_t* self, int how)
 	int ret = shutdown(self->sockfd, how);
 	if(ret == -1)
 	{
+		self->error = 1;
 		LOGE("shutdown failed");
 	}
+	// depending on "how" we may or may not be connected
+	// wait until the next recv command to set flag
 	return ret;
 }
 
@@ -331,6 +342,8 @@ int net_socket_send(net_socket_t* self, const void* data, int len)
 		if(sent <= 0)
 		{
 			// failed to send
+			self->error     = 1;
+			self->connected = 0;
 			LOGE("send failed");
 			return len - left;
 		}
@@ -349,7 +362,27 @@ int net_socket_recv(net_socket_t* self, void* data, int len)
 	int ret = recv(self->sockfd, data, len, 0);
 	if(ret == -1)
 	{
+		self->error = 1;
+		self->connected = 0;
 		LOGE("recv failed");
 	}
+	else if(ret == 0)
+	{
+		self->connected = 0;
+	}
 	return ret;
+}
+
+int net_socket_error(net_socket_t* self)
+{
+	assert(self);
+	LOGD("debug");
+	return self->error;
+}
+
+int net_socket_connected(net_socket_t* self)
+{
+	assert(self);
+	LOGD("debug");
+	return self->connected;
 }
