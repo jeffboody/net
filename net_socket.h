@@ -32,6 +32,9 @@
 #define NET_SOCKET_SHUT_WR   1
 #define NET_SOCKET_SHUT_RDWR 2
 
+// options
+#define NET_SOCKET_TCP_NODELAY 0
+
 typedef struct
 {
 	int sockfd;
@@ -47,6 +50,7 @@ void          net_socket_close(net_socket_t** _self);
 int           net_socket_sendall(net_socket_t* self, const void* data, int len, int* sent);
 int           net_socket_recv(net_socket_t* self, void* data, int len, int* recvd);
 int           net_socket_recvall(net_socket_t* self, void* data, int len, int* recvd);
+int           net_socket_option(net_socket_t* self, int name, int value);
 int           net_socket_error(net_socket_t* self);
 int           net_socket_connected(net_socket_t* self);
 

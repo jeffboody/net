@@ -23,6 +23,8 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <netdb.h>
 #include <unistd.h>
 
@@ -416,6 +418,29 @@ int net_socket_recvall(net_socket_t* self, void* data, int len, int* recvd)
 		self->connected = 0;
 		*recvd          = len - left;
 	return 0;
+}
+
+int net_socket_option(net_socket_t* self, int name, int value)
+{
+	assert(self);
+	LOGD("debug name=%i, value=%i", name, value);
+
+	if(name == NET_SOCKET_TCP_NODELAY)
+	{
+		if(setsockopt(self->sockfd, IPPROTO_TCP, TCP_NODELAY, (const void*) &value,
+		              sizeof(int)) == -1)
+		{
+			LOGE("setsockopt TCP_NODELAY failed");
+			return 0;
+		}
+	}
+	else
+	{
+		LOGE("invalid name=%i", name);
+		return 0;
+	}
+
+	return 1;
 }
 
 int net_socket_error(net_socket_t* self)
