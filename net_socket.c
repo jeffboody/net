@@ -75,6 +75,7 @@ static void net_log(const char* func, int line, const char* fmt, ...)
 	#define LOGD(...)
 #endif
 #define LOGI(...) (net_log(__func__, __LINE__, __VA_ARGS__))
+#define LOGW(...) (net_log(__func__, __LINE__, __VA_ARGS__))
 #define LOGE(...) (net_log(__func__, __LINE__, __VA_ARGS__))
 
 /***********************************************************
