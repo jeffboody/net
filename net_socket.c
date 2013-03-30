@@ -79,6 +79,71 @@ static void net_log(const char* func, int line, const char* fmt, ...)
 #define LOGE(...) (net_log(__func__, __LINE__, __VA_ARGS__))
 
 /***********************************************************
+* private                                                  *
+***********************************************************/
+
+#define NET_SOCKET_BUFSIZE 64*1024
+
+static int send_buffered(net_socket_t* self, const void* data, int len)
+{
+	assert(self);
+	assert(self->buffer);
+	assert(data);
+	// skip LOGD
+
+	// buffer data
+	int len_free = NET_SOCKET_BUFSIZE - self->len;
+	int len_copy = (len_free >= len) ? len : len_free;
+	void* dst = (void*) (self->buffer + self->len);
+	memcpy(dst, data, len_copy);
+	self->len += len_copy;
+
+	// flush
+	if(self->len == NET_SOCKET_BUFSIZE)
+	{
+		if(net_socket_flush(self) == 0)
+		{
+			return 0;
+		}
+	}
+
+	return len_copy;
+}
+
+static int sendall(net_socket_t* self, const void* data, int len, int buffered)
+{
+	assert(self);
+	assert(data);
+	LOGD("debug len=%i, buffered=%i", len, buffered);
+
+	int left        = len;
+	const void* buf = data;
+	while(left > 0)
+	{
+		int count;
+		if(buffered)
+		{
+			count = send_buffered(self, buf, left);
+		}
+		else
+		{
+			count = send(self->sockfd, buf, left, 0);
+		}
+
+		if(count <= 0)
+		{
+			LOGE("send failed");
+			self->error     = 1;
+			self->connected = 0;
+			return 0;
+		}
+		left = left - count;
+		buf  = buf + count;
+	}
+	return 1;
+}
+
+/***********************************************************
 * public                                                   *
 ***********************************************************/
 
@@ -89,7 +154,8 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 	LOGD("debug addr=%s, port=%s, type=%i", addr, port, type);
 
 	int socktype;
-	if(type == NET_SOCKET_TCP)
+	if((type >= NET_SOCKET_TCP) &&
+	   (type < NET_SOCKET_UDP))
 	{
 		socktype = SOCK_STREAM;
 	}
@@ -109,6 +175,21 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 		LOGE("malloc failed");
 		return NULL;
 	}
+
+	if(type == NET_SOCKET_TCP_BUFFERED)
+	{
+		self->buffer = (unsigned char*) malloc(NET_SOCKET_BUFSIZE*sizeof(unsigned char));
+		if(self->buffer == NULL)
+		{
+			LOGE("malloc failed");
+			goto fail_buffer;
+		}
+	}
+	else
+	{
+		self->buffer = NULL;
+	}
+	self->len = 0;
 
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof(hints));
@@ -134,6 +215,17 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 			continue;
 		}
 
+		if((type == NET_SOCKET_TCP_NODELAY) ||
+		   (type == NET_SOCKET_TCP_BUFFERED))
+		{
+			int yes = 1;
+			if(setsockopt(self->sockfd, IPPROTO_TCP, TCP_NODELAY, (const void*) &yes,
+			              sizeof(int)) == -1)
+			{
+				LOGW("setsockopt TCP_NODELAY failed");
+			}
+		}
+
 		if(connect(self->sockfd, i->ai_addr, i->ai_addrlen) == -1)
 		{
 			LOGE("connect failed");
@@ -155,6 +247,7 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 
 	self->error     = 0;
 	self->connected = 1;
+	self->type      = type;
 
 	// success
 	return self;
@@ -162,6 +255,8 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 	// failure
 	fail_socket:
 	fail_getaddrinfo:
+		free(self->buffer);
+	fail_buffer:
 		free(self);
 	return NULL;
 }
@@ -173,7 +268,8 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 	LOGD("debug port=%s, type=%i, backlog=%i", port, type, backlog);
 
 	int socktype;
-	if(type == NET_SOCKET_TCP)
+	if((type >= NET_SOCKET_TCP) &&
+	   (type < NET_SOCKET_UDP))
 	{
 		socktype = SOCK_STREAM;
 	}
@@ -193,6 +289,10 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 		LOGE("malloc failed");
 		return NULL;
 	}
+
+	// not needed for listening socket
+	self->buffer = NULL;
+	self->len    = 0;
 
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof(hints));
@@ -223,9 +323,10 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 		if(setsockopt(self->sockfd, SOL_SOCKET, SO_REUSEADDR, &yes,
 		              sizeof(int)) == -1)
 		{
-			// log and continue
-			LOGE("setsockopt failed");
+			LOGW("setsockopt failed");
 		}
+
+		// TCP_NODELAY is not needed for server socket
 
 		if(bind(self->sockfd, i->ai_addr, i->ai_addrlen) == -1)
 		{
@@ -253,6 +354,7 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 
 	self->error     = 0;
 	self->connected = 1;
+	self->type      = type;
 
 	// success
 	return self;
@@ -287,14 +389,44 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 		goto fail_remote;
 	}
 
+	int type = self->type;
+	if(type == NET_SOCKET_TCP_BUFFERED)
+	{
+		remote->buffer = (unsigned char*) malloc(NET_SOCKET_BUFSIZE*sizeof(unsigned char));
+		if(remote->buffer == NULL)
+		{
+			LOGE("malloc failed");
+			goto fail_buffer;
+		}
+	}
+	else
+	{
+		remote->buffer = NULL;
+	}
+	remote->len = 0;
+
+	if((type == NET_SOCKET_TCP_NODELAY) ||
+	   (type == NET_SOCKET_TCP_BUFFERED))
+	{
+		int yes = 1;
+		if(setsockopt(remote->sockfd, IPPROTO_TCP, TCP_NODELAY, (const void*) &yes,
+		              sizeof(int)) == -1)
+		{
+			LOGW("setsockopt TCP_NODELAY failed");
+		}
+	}
+
 	remote->sockfd    = sockfd;
 	remote->error     = 0;
 	remote->connected = 1;
+	remote->type      = type;
 
 	// success
 	return remote;
 
 	// failure
+	fail_buffer:
+		free(remote);
 	fail_remote:
 		close(sockfd);
 	return NULL;
@@ -326,36 +458,41 @@ void net_socket_close(net_socket_t** _self)
 	{
 		LOGD("debug");
 		close(self->sockfd);
+		free(self->buffer);
 		free(self);
 		*_self = NULL;
 	}
 }
 
-int net_socket_sendall(net_socket_t* self, const void* data, int len, int* sent)
+int net_socket_sendall(net_socket_t* self, const void* data, int len)
 {
 	assert(self);
 	assert(data);
-	assert(sent);
 	LOGD("debug len=%i", len);
 
-	int left        = len;
-	const void* buf = data;
-	while(left > 0)
+	int buffered = 0;
+	if((self->type == NET_SOCKET_TCP_BUFFERED) &&
+	   (self->buffer))
 	{
-		int count = send(self->sockfd, buf, left, 0);
-		if(count <= 0)
-		{
-			LOGE("send failed");
-			self->error     = 1;
-			self->connected = 0;
-			*sent = len - left;
-			return 0;
-		}
-		left = left - count;
-		buf  = buf + count;
+		buffered = 1;
 	}
-	*sent = len;
-	return 1;
+
+	return sendall(self, data, len, buffered);
+}
+
+int net_socket_flush(net_socket_t* self)
+{
+	assert(self);
+	LOGD("debug");
+
+	int flushed = 1;
+	if((self->type == NET_SOCKET_TCP_BUFFERED) &&
+	   (self->buffer))
+	{
+		flushed = sendall(self, self->buffer, self->len, 0);
+		self->len = 0;
+	}
+	return flushed;
 }
 
 int net_socket_recv(net_socket_t* self, void* data, int len, int* recvd)
@@ -419,29 +556,6 @@ int net_socket_recvall(net_socket_t* self, void* data, int len, int* recvd)
 		self->connected = 0;
 		*recvd          = len - left;
 	return 0;
-}
-
-int net_socket_option(net_socket_t* self, int name, int value)
-{
-	assert(self);
-	LOGD("debug name=%i, value=%i", name, value);
-
-	if(name == NET_SOCKET_TCP_NODELAY)
-	{
-		if(setsockopt(self->sockfd, IPPROTO_TCP, TCP_NODELAY, (const void*) &value,
-		              sizeof(int)) == -1)
-		{
-			LOGE("setsockopt TCP_NODELAY failed");
-			return 0;
-		}
-	}
-	else
-	{
-		LOGE("invalid name=%i", name);
-		return 0;
-	}
-
-	return 1;
 }
 
 int net_socket_error(net_socket_t* self)

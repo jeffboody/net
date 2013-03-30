@@ -24,22 +24,33 @@
 #ifndef net_socket_H
 #define net_socket_H
 
-#define NET_SOCKET_TCP 0
-#define NET_SOCKET_UDP 1
+// type
+// TCP: use Nagle's algorithm to buffer data until ACK is received
+// TCP_NODELAY: send data immediately for low latency but higher overhead
+// TCP_BUFFERED: send data when buffer is full or flushed
+// Note that when using TCP_BUFFERED a flush may be needed before receiving
+// data to ensure that the remote receives the packets for which it is
+// expected to respond.
+#define NET_SOCKET_TCP          0
+#define NET_SOCKET_TCP_NODELAY  1
+#define NET_SOCKET_TCP_BUFFERED 2
+#define NET_SOCKET_UDP          3
 
 // shutdown "how"
 #define NET_SOCKET_SHUT_RD   0
 #define NET_SOCKET_SHUT_WR   1
 #define NET_SOCKET_SHUT_RDWR 2
 
-// options
-#define NET_SOCKET_TCP_NODELAY 0
-
 typedef struct
 {
+	int type;
 	int sockfd;
 	int connected;
 	int error;
+
+	// only valid for NET_SOCKET_TCP_BUFFERED
+	unsigned int   len;
+	unsigned char* buffer;
 } net_socket_t;
 
 net_socket_t* net_socket_connect(const char* addr, const char* port, int type);
@@ -47,10 +58,10 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog);
 net_socket_t* net_socket_accept(net_socket_t* self);
 int           net_socket_shutdown(net_socket_t* self, int how);
 void          net_socket_close(net_socket_t** _self);
-int           net_socket_sendall(net_socket_t* self, const void* data, int len, int* sent);
+int           net_socket_sendall(net_socket_t* self, const void* data, int len);
+int           net_socket_flush(net_socket_t* self);
 int           net_socket_recv(net_socket_t* self, void* data, int len, int* recvd);
 int           net_socket_recvall(net_socket_t* self, void* data, int len, int* recvd);
-int           net_socket_option(net_socket_t* self, int name, int value);
 int           net_socket_error(net_socket_t* self);
 int           net_socket_connected(net_socket_t* self);
 

@@ -52,8 +52,8 @@ int main(int argc, char** argv)
 	char buf[256];
 	while(1)
 	{
-		int cnt_recv;
-		net_socket_recv(a, buf, 255, &cnt_recv);
+		int recvd;
+		net_socket_recv(a, buf, 255, &recvd);
 		if(net_socket_error(a))
 		{
 			// failed to recv
@@ -66,12 +66,11 @@ int main(int argc, char** argv)
 		}
 		else
 		{
-			buf[cnt_recv] = '\0';
+			buf[recvd] = '\0';
 			printf("%s", buf);
 		}
 
-		int cnt_send;
-		net_socket_sendall(a, buf, cnt_recv, &cnt_send);
+		net_socket_sendall(a, buf, recvd);
 		if(net_socket_error(a))
 		{
 			// failed to send
