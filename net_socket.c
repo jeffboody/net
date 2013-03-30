@@ -409,7 +409,7 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 	   (type == NET_SOCKET_TCP_BUFFERED))
 	{
 		int yes = 1;
-		if(setsockopt(remote->sockfd, IPPROTO_TCP, TCP_NODELAY, (const void*) &yes,
+		if(setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (const void*) &yes,
 		              sizeof(int)) == -1)
 		{
 			LOGW("setsockopt TCP_NODELAY failed");
