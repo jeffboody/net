@@ -219,7 +219,7 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 		}
 
 		int yes = 1;
-		if(setsockopt(self->sockfd, SOL_SOCKET, SO_REUSEADDR,&yes,
+		if(setsockopt(self->sockfd, SOL_SOCKET, SO_REUSEADDR, &yes,
 		              sizeof(int)) == -1)
 		{
 			// log and continue
