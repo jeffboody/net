@@ -21,5 +21,6 @@ net:
 clean:
 	rm -f $(OBJECTS) *~ \#*\# $(TARGET)
 	$(MAKE) -C net clean
+	rm net
 
 $(OBJECTS): $(HFILES)
