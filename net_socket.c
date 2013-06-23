@@ -120,12 +120,12 @@ static int sendall(net_socket_t* self, const void* data, int len, int buffered)
 	const void* buf = data;
 	while(left > 0)
 	{
-		int count;
+		int count = 0;
 		if(buffered)
 		{
 			count = send_buffered(self, buf, left);
 		}
-		else
+		else if(self->connected)
 		{
 			count = send(self->sockfd, buf, left, 0);
 		}
