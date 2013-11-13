@@ -63,7 +63,7 @@ static void net_log(const char* func, int line, const char* fmt, ...)
 		va_end(argptr);
 	}
 	#ifdef ANDROID
-		__android_log_print(ANDROID_LOG_INFO, "net", buf);
+		__android_log_print(ANDROID_LOG_INFO, "net", "%s", buf);
 	#else
 		printf("%s\n", buf);
 	#endif
