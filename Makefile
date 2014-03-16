@@ -1,5 +1,5 @@
 TARGET   = libnet.a
-NET      = net_socket
+NET      = net_socket net_log
 SOURCE   = $(NET:%=%.c)
 OBJECTS  = $(SOURCE:.c=.o)
 HFILES   = $(NET:%=%.h)
