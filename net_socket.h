@@ -48,6 +48,9 @@ typedef struct
 	int connected;
 	int error;
 
+	// HTTP host - "addr:port"
+	char host[256];
+
 	// only valid for NET_SOCKET_TCP_BUFFERED
 	unsigned int   len;
 	unsigned char* buffer;

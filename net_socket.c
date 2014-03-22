@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 
 #define LOG_TAG "net"
 #include "net_log.h"
@@ -149,6 +150,9 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 	}
 	self->len = 0;
 
+	// for HTTP
+	snprintf(self->host, 256, "%s:%s", addr, port);
+
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family   = AF_UNSPEC;
@@ -157,7 +161,7 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 	struct addrinfo* info;
 	if(getaddrinfo(addr, port, &hints, &info) != 0)
 	{
-		LOGE("getaddrinfo failed");
+		LOGE("getaddrinfo addr=%s, port=%s, failed", addr, port);
 		goto fail_getaddrinfo;
 	}
 

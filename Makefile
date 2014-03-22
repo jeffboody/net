@@ -1,8 +1,8 @@
 TARGET   = libnet.a
-NET      = net_socket net_log
-SOURCE   = $(NET:%=%.c)
+CLASS    = net_socket net_socket_wget net_log
+SOURCE   = $(CLASS:%=%.c)
 OBJECTS  = $(SOURCE:.c=.o)
-HFILES   = $(NET:%=%.h)
+HFILES   = $(CLASS:%=%.h)
 OPT      = -O2 -Wall
 CFLAGS   = $(OPT) -I.
 LDFLAGS  = -lm -L/usr/lib
