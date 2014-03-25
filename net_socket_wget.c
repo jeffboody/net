@@ -272,16 +272,9 @@ static int http_stream_readchunked(http_stream_t* self, int* _size, char** _data
 	assert(_data);
 	LOGD("debug");
 
-	if((*_size != 0) || (*_data != NULL))
-	{
-		LOGE("invalid _size=%p, _data=%i", *_size, *_data);
-		return 0;
-	}
-
 	// read data
 	int   size  = 0;
 	int   recvd = 0;
-	char* data = NULL;
 	while(1)
 	{
 		if(http_stream_readi(self, &size) == 0)
@@ -300,13 +293,14 @@ static int http_stream_readchunked(http_stream_t* self, int* _size, char** _data
 			goto fail_chunk;
 		}
 
-		char* tmp = (char*) realloc(data, recvd + size);
-		if(tmp == NULL)
+		char* data = (char*) realloc(*_data, recvd + size);
+		if(data == NULL)
 		{
 			LOGE("realloc failed");
 			goto fail_chunk;
 		}
-		data = tmp;
+		*_data = data;
+		*_size = recvd + size;
 
 		if(http_stream_readd(self, size, &data[recvd]) == 0)
 		{
@@ -336,8 +330,6 @@ static int http_stream_readchunked(http_stream_t* self, int* _size, char** _data
 		if(len == 0)
 		{
 			// endln
-			*_data = data;
-			*_size = recvd;
 			return 1;
 		}
 	}
@@ -345,7 +337,8 @@ static int http_stream_readchunked(http_stream_t* self, int* _size, char** _data
 	// failure
 	fail_footer:
 	fail_chunk:
-		free(data);
+		free(*_data);
+		*_size = 0;
 	return 0;
 }
 
@@ -411,24 +404,24 @@ int net_socket_wget(net_socket_t* self,
 	}
 
 	// read data
-	int   size = 0;
-	char* data = NULL;
 	if(header.chunked)
 	{
-		if(http_stream_readchunked(&stream, &size, &data) == 0)
+		if(http_stream_readchunked(&stream, _size, (char**) _data) == 0)
 		{
 			goto fail_data;
 		}
 	}
 	else
 	{
-		size = header.content_length;
-		data = (char*) malloc(size*sizeof(char));
+		int   size = header.content_length;
+		char* data = (char*) realloc(*_data, size*sizeof(char));
 		if(data == NULL)
 		{
 			LOGE("malloc failed");
 			return 0;
 		}
+		*_data = data;
+		*_size = size;
 
 		if(http_stream_readd(&stream, size, data) == 0)
 		{
@@ -437,12 +430,11 @@ int net_socket_wget(net_socket_t* self,
 	}
 
 	// success
-	*_size = size;
-	*_data = data;
 	return 1;
 
 	// failure
 	fail_data:
-		free(data);
+		free(*_data);
+		*_size = 0;
 	return 0;
 }
