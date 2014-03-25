@@ -129,10 +129,6 @@ static int http_url_parse(http_url_t* self, const char* url)
 	}
 	else
 	{
-		char addr_port[256];
-		strncpy(addr_port, start, len);
-		addr_port[len] = '\0';
-
 		len = (int) (port - start);
 		strncpy(self->addr, start, len);
 		self->addr[len] = '\0';
