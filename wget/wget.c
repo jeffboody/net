@@ -45,7 +45,7 @@ static const char* findc(const char* s, const char* e, char c)
 
 	if(e)
 	{
-		while(*s != '\0')
+		while((*s != '\0') && (s != e))
 		{
 			if(*s == c)
 			{
@@ -56,7 +56,7 @@ static const char* findc(const char* s, const char* e, char c)
 	}
 	else
 	{
-		while((*s != '\0') && (s != e))
+		while(*s != '\0')
 		{
 			if(*s == c)
 			{
