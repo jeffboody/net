@@ -338,6 +338,7 @@ static int http_stream_readchunked(http_stream_t* self, int* _size, char** _data
 	fail_footer:
 	fail_chunk:
 		free(*_data);
+		*_data = NULL;
 		*_size = 0;
 	return 0;
 }
@@ -435,6 +436,7 @@ int net_socket_wget(net_socket_t* self,
 	// failure
 	fail_data:
 		free(*_data);
+		*_data = NULL;
 		*_size = 0;
 	return 0;
 }
