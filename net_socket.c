@@ -91,7 +91,10 @@ static int sendall(net_socket_t* self, const void* data, int len, int buffered)
 
 		if(count <= 0)
 		{
-			LOGE("send failed");
+			if(self->error == 0)
+			{
+				LOGE("send failed");
+			}
 			self->error     = 1;
 			self->connected = 0;
 			return 0;
@@ -467,7 +470,10 @@ int net_socket_recv(net_socket_t* self, void* data, int len, int* recvd)
 	int count = recv(self->sockfd, data, len, 0);
 	if(count == -1)
 	{
-		LOGE("recv failed");
+		if(self->error == 0)
+		{
+			LOGE("recv failed");
+		}
 		self->error     = 1;
 		self->connected = 0;
 		*recvd          = 0;
@@ -496,13 +502,19 @@ int net_socket_recvall(net_socket_t* self, void* data, int len, int* recvd)
 		int count = recv(self->sockfd, buf, left, 0);
 		if(count == -1)
 		{
-			LOGE("recv failed");
+			if(self->error == 0)
+			{
+				LOGE("recv failed");
+			}
 			self->error = 1;
 			goto fail_recv;
 		}
 		else if(count == 0)
 		{
-			LOGE("recv closed");
+			if(self->connected == 1)
+			{
+				LOGE("recv closed");
+			}
 			goto fail_recv;
 		}
 		left = left - count;
