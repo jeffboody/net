@@ -401,6 +401,7 @@ int net_socket_wget(net_socket_t* self,
 	http_header_init(&header);
 	if(http_stream_readh(&stream, &header) == 0)
 	{
+		self->error = 1;
 		return 0;
 	}
 
@@ -419,6 +420,7 @@ int net_socket_wget(net_socket_t* self,
 		if(data == NULL)
 		{
 			LOGE("malloc failed");
+			self->error = 1;
 			return 0;
 		}
 		*_data = data;
@@ -438,5 +440,6 @@ int net_socket_wget(net_socket_t* self,
 		free(*_data);
 		*_data = NULL;
 		*_size = 0;
+		self->error = 1;
 	return 0;
 }
