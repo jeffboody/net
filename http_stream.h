@@ -32,9 +32,9 @@ typedef struct
 	int status;
 	int content_length;
 	int chunked;
-} http_header_t;
+} http_response_t;
 
-void http_header_init(http_header_t* self);
+void http_response_init(http_response_t* self);
 
 typedef struct
 {
@@ -45,6 +45,6 @@ typedef struct
 } http_stream_t;
 
 void http_stream_init(http_stream_t* self, net_socket_t* sock);
-int  http_stream_readh(http_stream_t* self, http_header_t* header);
+int  http_stream_readResponse(http_stream_t* self, http_response_t* response);
 int  http_stream_readd(http_stream_t* self, int size, char* data);
 int  http_stream_readchunked(http_stream_t* self, int* _size, char** _data);

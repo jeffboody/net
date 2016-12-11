@@ -128,7 +128,7 @@ static int http_stream_readi(http_stream_t* self, int* x)
 * public                                                   *
 ***********************************************************/
 
-void http_header_init(http_header_t* self)
+void http_response_init(http_response_t* self)
 {
 	assert(self);
 	LOGD("debug");
@@ -148,10 +148,11 @@ void http_stream_init(http_stream_t* self, net_socket_t* sock)
 	self->idx  = 0;
 }
 
-int http_stream_readh(http_stream_t* self, http_header_t* header)
+int http_stream_readResponse(http_stream_t* self,
+                             http_response_t* response)
 {
 	assert(self);
-	assert(header);
+	assert(response);
 	LOGD("debug");
 
 	/*
@@ -167,25 +168,25 @@ int http_stream_readh(http_stream_t* self, http_header_t* header)
 		if(len == 0)
 		{
 			// endln
-			if(header->status == HTTP_CONTINUE)
+			if(response->status == HTTP_CONTINUE)
 			{
-				http_header_init(header);
-				return http_stream_readh(self, header);
+				http_response_init(response);
+				return http_stream_readResponse(self, response);
 			}
-			else if((header->status == HTTP_OK) &&
-			        (header->content_length > 0))
+			else if((response->status == HTTP_OK) &&
+			        (response->content_length > 0))
 			{
 				return 1;
 			}
-			else if((header->status == HTTP_OK) &&
-			        (header->chunked))
+			else if((response->status == HTTP_OK) &&
+			        (response->chunked))
 			{
 				return 1;
 			}
 			else
 			{
 				LOGE("invalid status=%i, content_length=%i, chunked=%i",
-				     header->status, header->content_length, header->chunked);
+				     response->status, response->content_length, response->chunked);
 				return 0;
 			}
 		}
@@ -199,15 +200,15 @@ int http_stream_readh(http_stream_t* self, http_header_t* header)
 		char s[256];
 		if(sscanf(line, "HTTP/1.1 %i %s", &i, s) == 2)
 		{
-			header->status = i;
+			response->status = i;
 		}
 		else if(sscanf(line, "CONTENT-LENGTH: %i", &i) == 1)
 		{
-			header->content_length = i;
+			response->content_length = i;
 		}
 		else if(strncmp(line, "TRANSFER-ENCODING: CHUNKED", 256) == 0)
 		{
-			header->chunked = 1;
+			response->chunked = 1;
 		}
 		else
 		{

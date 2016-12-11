@@ -83,19 +83,19 @@ int net_socket_wget(net_socket_t* self,
 		return 0;
 	}
 
-	// read header
-	http_stream_t stream;
-	http_header_t header;
+	// read response
+	http_stream_t   stream;
+	http_response_t response;
 	http_stream_init(&stream, self);
-	http_header_init(&header);
-	if(http_stream_readh(&stream, &header) == 0)
+	http_response_init(&response);
+	if(http_stream_readResponse(&stream, &response) == 0)
 	{
 		self->error = 1;
 		return 0;
 	}
 
 	// read data
-	if(header.chunked)
+	if(response.chunked)
 	{
 		if(http_stream_readchunked(&stream, _size, (char**) _data) == 0)
 		{
@@ -104,7 +104,7 @@ int net_socket_wget(net_socket_t* self,
 	}
 	else
 	{
-		int   size = header.content_length;
+		int   size = response.content_length;
 		char* data = (char*) realloc(*_data, size*sizeof(char));
 		if(data == NULL)
 		{
