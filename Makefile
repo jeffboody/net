@@ -1,5 +1,5 @@
 TARGET   = libnet.a
-CLASS    = net_socket net_socket_wget net_log
+CLASS    = net_socket net_socket_wget net_log http_stream
 SOURCE   = $(CLASS:%=%.c)
 OBJECTS  = $(SOURCE:.c=.o)
 HFILES   = $(CLASS:%=%.h)
