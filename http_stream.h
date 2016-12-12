@@ -27,6 +27,9 @@
 #define HTTP_OK       200
 #define HTTP_BUF_SIZE 4096
 
+#define HTTP_METHOD_NONE 0
+#define HTTP_METHOD_GET  1
+
 typedef struct
 {
 	int status;
@@ -38,6 +41,15 @@ void http_response_init(http_response_t* self);
 
 typedef struct
 {
+	int  method;
+	int  close;
+	char request[256];
+} http_request_t;
+
+void http_request_init(http_request_t* self);
+
+typedef struct
+{
 	net_socket_t* sock;
 	char          buf[HTTP_BUF_SIZE];
 	int           size;
@@ -46,5 +58,6 @@ typedef struct
 
 void http_stream_init(http_stream_t* self, net_socket_t* sock);
 int  http_stream_readResponse(http_stream_t* self, http_response_t* response);
+int  http_stream_readRequest(http_stream_t* self, http_request_t* request);
 int  http_stream_readd(http_stream_t* self, int size, char* data);
 int  http_stream_readchunked(http_stream_t* self, int* _size, char** _data);

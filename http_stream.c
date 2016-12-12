@@ -124,6 +124,33 @@ static int http_stream_readi(http_stream_t* self, int* x)
 	return 1;
 }
 
+static int http_request_validate(const char* s)
+{
+	assert(self);
+
+	int i = 0;
+	while(s[i] != '\0')
+	{
+		// restrict the supported characters
+		if(((s[i] >= 'a') && (s[i]     <= 'z')) ||
+		   ((s[i] >= 'A') && (s[i]     <= 'Z')) ||
+		   ((s[i] >= '0') && (s[i]     <= '9')) ||
+		   ((s[i] == '.') && (s[i + 1] != '.')) ||
+		   (s[i] == '_') ||
+		   (s[i] == '-') ||
+		   (s[i] == '/'))
+		{
+			++i;
+			continue;
+		}
+
+		LOGE("invalid request=%s", s);
+		return 0;
+	}
+
+	return 1;
+}
+
 /***********************************************************
 * public                                                   *
 ***********************************************************/
@@ -136,6 +163,18 @@ void http_response_init(http_response_t* self)
 	self->status         = 0;
 	self->content_length = 0;
 	self->chunked        = 0;
+}
+
+void http_request_init(http_request_t* self)
+{
+	assert(self);
+	LOGD("debug");
+
+	self->method = HTTP_METHOD_NONE;
+	self->close  = 0;
+
+	snprintf(self->request, 256, "%s", "");
+	self->request[255] = '\0';
 }
 
 void http_stream_init(http_stream_t* self, net_socket_t* sock)
@@ -216,6 +255,88 @@ int http_stream_readResponse(http_stream_t* self,
 		}
 	}
 
+	LOGE("invalid response");
+	return 0;
+}
+
+int http_stream_readRequest(http_stream_t* self, http_request_t* request)
+{
+	assert(self);
+	assert(request);
+	LOGD("debug");
+
+	/*
+	 * GET <request> HTTP/1.1
+	 * <optional>Connection: close
+	 */
+
+	char line[256];
+	while(http_stream_readln(self, line))
+	{
+		int len = strnlen(line, 256);
+		if(len == 0)
+		{
+			// endln
+			if(request->method == HTTP_METHOD_GET)
+			{
+				return 1;
+			}
+			else
+			{
+				LOGE("invalid method=%i, close=%i, request=%s",
+				     request->method, request->close, request->request);
+				return 0;
+			}
+		}
+
+		int i;
+		char uline[256];
+		strncpy(uline, line, 256);
+		uline[255] = '\0';
+		for(i = 0; i < len; ++i)
+		{
+			uline[i] = (char) toupper((int) uline[i]);
+		}
+
+		char s[256];
+		if(sscanf(uline, "GET %s HTTP/1.1", s) == 1)
+		{
+			if(request->method == HTTP_METHOD_GET)
+			{
+				LOGE("invalid line=%s", line);
+				return 0;
+			}
+
+			// rescan case sensitive request
+			char s1[256];
+			char s2[256];
+			char s3[256];
+			if(sscanf(line, "%s %s %s", s1, s2, s3) == 3)
+			{
+				if(http_request_validate(s2))
+				{
+					strncpy(request->request, s2, 256);
+					request->request[255] = '\0';
+					request->method = HTTP_METHOD_GET;
+				}
+			}
+			else
+			{
+				LOGE("invalid line=%s", line);
+				return 0;
+			}
+		}
+		else if(strncmp(uline, "CONNECTION: CLOSE", 256) == 0)
+		{
+			request->close = 1;
+		}
+		else
+		{
+			// ignore
+		}
+	}
+
+	LOGE("invalid request");
 	return 0;
 }
 
