@@ -23,9 +23,10 @@
 
 #include "net_socket.h"
 
-#define HTTP_CONTINUE 100
-#define HTTP_OK       200
-#define HTTP_BUF_SIZE 4096
+#define HTTP_CONTINUE  100
+#define HTTP_OK        200
+#define HTTP_NOT_FOUND 404
+#define HTTP_BUF_SIZE  4096
 
 #define HTTP_METHOD_NONE 0
 #define HTTP_METHOD_GET  1
@@ -61,3 +62,5 @@ int  http_stream_readResponse(http_stream_t* self, http_response_t* response);
 int  http_stream_readRequest(http_stream_t* self, http_request_t* request);
 int  http_stream_readd(http_stream_t* self, int size, char* data);
 int  http_stream_readchunked(http_stream_t* self, int* _size, char** _data);
+void http_stream_writeError(http_stream_t* self, int err, const char* reason);
+int  http_stream_writeData(http_stream_t* self, int size, void* data);

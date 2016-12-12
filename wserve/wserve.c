@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Jeff Boody
+ * Copyright (c) 2016 Jeff Boody
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,27 +21,46 @@
  *
  */
 
-#ifndef net_socket_wget_H
-#define net_socket_wget_H
+#include "net/net_socket.h"
+#include "net/net_socket_wget.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-#include "net_socket.h"
+int main(int argc, char** argv)
+{
+	if(argc < 2)
+	{
+		printf("%s port\n", argv[0]);
+		return EXIT_FAILURE;
+	}
 
-typedef int (*net_socket_request_fn)(void* priv,
-                                     const char* request,
-                                     int* _size,
-                                     void** _data);
+	net_socket_t* s = net_socket_listen(argv[1], NET_SOCKET_TCP, 1);
+	if(s == NULL)
+	{
+		return EXIT_FAILURE;
+	}
 
-int net_socket_wget(net_socket_t* self,
-                    const char* user_agent,
-                    const char* request,
-                    int close,
-                    int* _size, void** _data);
-int net_socket_wserve(net_socket_t* self, int chunked,
-                      void* request_priv,
-                      net_socket_request_fn request_fn);
-int net_socket_requestFile(void* priv,
-                           const char* request,
-                           int* _size,
-                           void** _data);
+	net_socket_t* a = net_socket_accept(s);
+	if(a == NULL)
+	{
+		goto fail_accept;
+	}
 
-#endif
+	if(net_socket_wserve(a, 0, NULL, NULL) == 0)
+	{
+		goto fail_serve;
+	}
+
+	net_socket_close(&a);
+	net_socket_close(&s);
+
+	// success
+	return EXIT_SUCCESS;
+
+	// failure
+	fail_serve:
+		net_socket_close(&a);
+	fail_accept:
+		net_socket_close(&s);
+	return EXIT_FAILURE;
+}

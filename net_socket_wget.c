@@ -132,3 +132,121 @@ int net_socket_wget(net_socket_t* self,
 		self->error = 1;
 	return 0;
 }
+
+int net_socket_wserve(net_socket_t* self, int chunked,
+                      void* request_priv,
+                      net_socket_request_fn request_fn)
+{
+	// request_fn may be NULL
+	assert(self);
+
+	if(chunked)
+	{
+		LOGW("chunked not supported");
+	}
+
+	http_request_t request;
+	http_request_init(&request);
+
+	http_stream_t stream;
+	http_stream_init(&stream, self);
+
+	// read the request
+	if(http_stream_readRequest(&stream, &request) == 0)
+	{
+		goto fail_read;
+	}
+
+	// get the request data
+	int   ok;
+	int   size = 0;
+	char* data = NULL;
+	if(request_fn)
+	{
+		ok = (*request_fn)(request_priv, request.request,
+		                   &size, (void**) &data);
+	}
+	else
+	{
+		ok = net_socket_requestFile(NULL, request.request,
+		                            &size, (void**) &data);
+	}
+
+	if(ok == 0)
+	{
+		goto fail_data;
+	}
+
+	if(http_stream_writeData(&stream, size, (void*) data) == 0)
+	{
+		// don't call writeError
+		self->error = 1;
+		free(data);
+		return 0;
+	}
+
+	free(data);
+
+	// success
+	return 1;
+
+	// failure
+	fail_data:
+		free(data);
+	fail_read:
+		http_stream_writeError(&stream, HTTP_NOT_FOUND, "Not found");
+		self->error = 1;
+	return 0;
+}
+
+int net_socket_requestFile(void* priv,
+                           const char* request,
+                           int* _size,
+                           void** _data)
+{
+	assert(priv == NULL);
+	assert(request);
+	assert(_size);
+	assert(_data);
+
+	// remove the leading '/'
+	const char* fname = &(request[1]);
+
+	FILE* f = fopen(fname, "r");
+	if(f == NULL)
+	{
+		LOGE("fopen failed fname=%s", fname);
+		return 0;
+	}
+
+	// determine file size
+	fseek(f, (long) 0, SEEK_END);
+	int size = (int) ftell(f);
+	fseek(f, 0, SEEK_SET);
+	*_size = size;
+
+	char* data = (char*) realloc(*_data, size*sizeof(char));
+	if(data == NULL)
+	{
+		LOGE("realloc failed");
+		goto fail_realloc;
+	}
+	*_data = data;
+
+	if(fread(data, size, 1, f) != 1)
+	{
+		LOGE("fread failed");
+		goto fail_fread;
+	}
+
+	fclose(f);
+
+	// success
+	return 1;
+
+	// failure
+	fail_fread:
+	fail_realloc:
+		fclose(f);
+	return 0;
+}

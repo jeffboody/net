@@ -126,7 +126,14 @@ static int http_stream_readi(http_stream_t* self, int* x)
 
 static int http_request_validate(const char* s)
 {
-	assert(self);
+	assert(s);
+
+	// require leading '/'
+	if(s[0] != '/')
+	{
+		LOGE("invalid request=%s", s);
+		return 0;
+	}
 
 	int i = 0;
 	while(s[i] != '\0')
@@ -440,4 +447,56 @@ int http_stream_readchunked(http_stream_t* self, int* _size, char** _data)
 		*_data = NULL;
 		*_size = 0;
 	return 0;
+}
+
+void http_stream_writeError(http_stream_t* self,
+                            int err, const char* reason)
+{
+	assert(self);
+	assert(reason);
+
+	/*
+	 * HTTP/1.1 <status> <string>
+	 */
+	char header[256];
+	snprintf(header, 256,
+	         "HTTP/1.1 %i %s\n\n",
+	         err, reason);
+	header[255] = '\0';
+
+	int len = strlen(header) + 1;
+
+	net_socket_sendall(self->sock, header, len);
+	net_socket_flush(self->sock);
+}
+
+int http_stream_writeData(http_stream_t* self,
+                          int size, void* data)
+{
+	assert(self);
+	assert(data);
+
+	/*
+	 * HTTP/1.1 <status> <string>
+	 * CONTENT-LENGTH: <len>
+	 * <optional>Transfer-Encoding: chunked
+	 */
+	char header[256];
+	snprintf(header, 256,
+	         "HTTP/1.1 %i OK\nCONTENT-LENGTH: %i\n\n",
+	         HTTP_OK, size);
+	header[255] = '\0';
+
+	int len = strlen(header);
+	if(net_socket_sendall(self->sock, header, len) == 0)
+	{
+		return 0;
+	}
+
+	if(net_socket_sendall(self->sock, data, size) == 0)
+	{
+		return 0;
+	}
+
+	return net_socket_flush(self->sock);
 }
