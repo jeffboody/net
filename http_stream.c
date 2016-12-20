@@ -231,7 +231,7 @@ int http_stream_readResponse(http_stream_t* self,
 			}
 			else
 			{
-				LOGE("invalid status=%i, content_length=%i, chunked=%i",
+				LOGD("invalid status=%i, content_length=%i, chunked=%i",
 				     response->status, response->content_length, response->chunked);
 				return 0;
 			}
@@ -262,7 +262,7 @@ int http_stream_readResponse(http_stream_t* self,
 		}
 	}
 
-	LOGE("invalid response");
+	LOGD("invalid response");
 	return 0;
 }
 
