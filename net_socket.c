@@ -429,6 +429,22 @@ void net_socket_close(net_socket_t** _self)
 	}
 }
 
+int net_socket_keepalive(net_socket_t* self, int val)
+{
+	assert(self);
+
+	if(setsockopt(self->sockfd, SOL_SOCKET, SO_KEEPALIVE,
+	              &val, sizeof(int)) == 0)
+	{
+		return 1;
+	}
+	else
+	{
+		LOGE("keepalive failed");
+		return 0;
+	}
+}
+
 int net_socket_sendall(net_socket_t* self, const void* data, int len)
 {
 	assert(self);
