@@ -429,12 +429,26 @@ void net_socket_close(net_socket_t** _self)
 	}
 }
 
-int net_socket_keepalive(net_socket_t* self, int val)
+int net_socket_keepalive(net_socket_t* self,
+                         int cnt, int idle, int intvl)
 {
 	assert(self);
 
-	if(setsockopt(self->sockfd, SOL_SOCKET, SO_KEEPALIVE,
-	              &val, sizeof(int)) == 0)
+	// default values take over 2 hours to reconnect
+	// my recommended values take about 2 minutes to reconnect
+	// cnt: max number of probes (9 -> 4)
+	// idle: idle time before sending probes (7200 -> 60)
+	// intvl: time between probes (75 -> 15)
+	// see man 7 tcp for more details
+	int enable = 1;
+	if((setsockopt(self->sockfd, SOL_SOCKET, SO_KEEPALIVE,
+	              &enable, sizeof(int)) == 0) &&
+	   (setsockopt(self->sockfd, IPPROTO_TCP, TCP_KEEPCNT,
+	              &cnt, sizeof(int)) == 0) &&
+	   (setsockopt(self->sockfd, IPPROTO_TCP, TCP_KEEPIDLE,
+	              &idle, sizeof(int)) == 0) &&
+	   (setsockopt(self->sockfd, IPPROTO_TCP, TCP_KEEPINTVL,
+	              &intvl, sizeof(int)) == 0))
 	{
 		return 1;
 	}
