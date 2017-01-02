@@ -445,8 +445,11 @@ int net_socket_keepalive(net_socket_t* self,
 	              &enable, sizeof(int)) == 0) &&
 	   (setsockopt(self->sockfd, IPPROTO_TCP, TCP_KEEPCNT,
 	              &cnt, sizeof(int)) == 0) &&
+#ifndef __APPLE__
+	   // TCP_KEEPIDLE is not defined on OSX
 	   (setsockopt(self->sockfd, IPPROTO_TCP, TCP_KEEPIDLE,
 	              &idle, sizeof(int)) == 0) &&
+#endif
 	   (setsockopt(self->sockfd, IPPROTO_TCP, TCP_KEEPINTVL,
 	              &intvl, sizeof(int)) == 0))
 	{
