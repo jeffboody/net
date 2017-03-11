@@ -26,6 +26,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
+#include <signal.h>
 #include <unistd.h>
 
 #include "net_socket.h"
@@ -137,6 +138,10 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 		LOGE("malloc failed");
 		return NULL;
 	}
+
+	// SIGPIPE causes the process to exit for broken streams
+	// but we want to receive EPIPE instead
+	signal(SIGPIPE, SIG_IGN);
 
 	if(type == NET_SOCKET_TCP_BUFFERED)
 	{
@@ -254,6 +259,10 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 		LOGE("malloc failed");
 		return NULL;
 	}
+
+	// SIGPIPE causes the process to exit for broken streams
+	// but we want to receive EPIPE instead
+	signal(SIGPIPE, SIG_IGN);
 
 	// not needed for listening socket
 	self->buffer = NULL;
