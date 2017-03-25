@@ -1,4 +1,4 @@
-TARGET   = echo
+TARGET   = echod
 CLASSES  = 
 SOURCE   = $(TARGET).c $(CLASSES:%=%.c)
 OBJECTS  = $(TARGET).o $(CLASSES:%=%.o)
