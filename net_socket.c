@@ -21,7 +21,10 @@
  *
  */
 
+#include <fcntl.h>
+#include <errno.h>
 #include <sys/types.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -104,6 +107,74 @@ static int sendall(net_socket_t* self, const void* data, int len, int buffered)
 		buf  = buf + count;
 	}
 	return 1;
+}
+
+static int net_socket_connectTimeout(net_socket_t* self,
+                                     struct addrinfo* i)
+{
+	assert(self);
+	assert(i);
+
+	// Note: use example.com:81 to test timeouts
+
+	// set the non-blocking flag
+	int flags = fcntl(self->sockfd, F_GETFL, 0);
+	fcntl(self->sockfd, F_SETFL, flags | O_NONBLOCK);
+
+	int c = connect(self->sockfd, i->ai_addr, i->ai_addrlen);
+	if((c == -1) && (errno == EINPROGRESS))
+	{
+		// complete connection with timeout
+		struct timeval timeout;
+		timeout.tv_sec  = 4;
+		timeout.tv_usec = 0;
+
+		fd_set fdset;
+		FD_ZERO(&fdset);
+		FD_SET(self->sockfd, &fdset);
+
+		int s = select(self->sockfd + 1, NULL,
+		               &fdset, NULL, &timeout);
+		if(s == 0)
+		{
+			LOGE("select timed out");
+			goto fail_select;
+		}
+		else if(s == -1)
+		{
+			LOGE("select errno=%i", (int) errno);
+			goto fail_select;
+		}
+
+		int so_error;
+		socklen_t len = sizeof(so_error);
+		getsockopt(self->sockfd, SOL_SOCKET, SO_ERROR,
+		           &so_error, &len);
+		if(so_error != 0)
+		{
+			LOGE("select so_error=%i", so_error);
+			goto fail_connected;
+		}
+	}
+	else if(c == -1)
+	{
+		LOGE("connect failed errno=%i", (int) errno);
+		goto fail_connect;
+	}
+
+	// restore the blocking flag
+	fcntl(self->sockfd, F_SETFL, flags);
+
+	// success
+	return 1;
+
+	// failure
+	fail_connected:
+	fail_select:
+	fail_connect:
+		// restore the blocking flag
+		fcntl(self->sockfd, F_SETFL, flags);
+	return 0;
 }
 
 /***********************************************************
@@ -196,9 +267,8 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 			}
 		}
 
-		if(connect(self->sockfd, i->ai_addr, i->ai_addrlen) == -1)
+		if(net_socket_connectTimeout(self, i) == 0)
 		{
-			LOGE("connect failed");
 			close(self->sockfd);
 			self->sockfd = -1;
 			i = i->ai_next;
