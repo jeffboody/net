@@ -169,7 +169,7 @@ static int http_url_parse(http_url_t* self, const char* url)
 	return 1;
 }
 
-int main(int argc, char** argv)
+int main(int argc, const char** argv)
 {
 	if(argc != 2)
 	{
