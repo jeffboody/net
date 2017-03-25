@@ -63,6 +63,8 @@ int           net_socket_shutdown(net_socket_t* self, int how);
 void          net_socket_close(net_socket_t** _self);
 int           net_socket_keepalive(net_socket_t* self,
                                    int cnt, int idle, int intvl);
+void          net_socket_timeout(net_socket_t* self,
+                                 int recv_to, int send_to);
 int           net_socket_sendall(net_socket_t* self, const void* data, int len);
 int           net_socket_flush(net_socket_t* self);
 int           net_socket_recv(net_socket_t* self, void* data, int len, int* recvd);

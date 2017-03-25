@@ -471,6 +471,31 @@ int net_socket_keepalive(net_socket_t* self,
 	}
 }
 
+void net_socket_timeout(net_socket_t* self,
+                        int recv_to, int send_to)
+{
+	assert(self);
+
+	struct timeval timeout;
+	timeout.tv_sec  = recv_to;
+	timeout.tv_usec = 0;
+
+	if(setsockopt(self->sockfd, SOL_SOCKET, SO_RCVTIMEO,
+	              (char*) &timeout,
+	              sizeof(timeout)) < 0)
+	{
+		LOGW("setsockopt timeout");
+	}
+
+	timeout.tv_sec = send_to;
+	if(setsockopt(self->sockfd, SOL_SOCKET, SO_SNDTIMEO,
+	              (char*) &timeout,
+	              sizeof(timeout)) < 0)
+	{
+		LOGW("setsockopt timeout");
+	}
+}
+
 int net_socket_sendall(net_socket_t* self, const void* data, int len)
 {
 	assert(self);
