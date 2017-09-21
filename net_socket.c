@@ -77,7 +77,6 @@ static int sendall(net_socket_t* self, const void* data, int len, int buffered)
 {
 	assert(self);
 	assert(data);
-	LOGD("debug len=%i, buffered=%i", len, buffered);
 
 	int left        = len;
 	const void* buf = data;
@@ -97,7 +96,7 @@ static int sendall(net_socket_t* self, const void* data, int len, int buffered)
 		{
 			if(self->error == 0)
 			{
-				LOGE("send failed");
+				LOGD("send failed");
 			}
 			self->error     = 1;
 			self->connected = 0;
@@ -137,12 +136,12 @@ static int net_socket_connectTimeout(net_socket_t* self,
 		               &fdset, NULL, &timeout);
 		if(s == 0)
 		{
-			LOGE("select timed out");
+			LOGD("select timed out");
 			goto fail_select;
 		}
 		else if(s == -1)
 		{
-			LOGE("select errno=%i", (int) errno);
+			LOGD("select errno=%i", (int) errno);
 			goto fail_select;
 		}
 
@@ -152,13 +151,13 @@ static int net_socket_connectTimeout(net_socket_t* self,
 		           &so_error, &len);
 		if(so_error != 0)
 		{
-			LOGE("select so_error=%i", so_error);
+			LOGD("select so_error=%i", so_error);
 			goto fail_connected;
 		}
 	}
 	else if(c == -1)
 	{
-		LOGE("connect failed errno=%i", (int) errno);
+		LOGD("connect failed errno=%i", (int) errno);
 		goto fail_connect;
 	}
 
@@ -185,7 +184,6 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 {
 	assert(addr);
 	assert(port);
-	LOGD("debug addr=%s, port=%s, type=%i", addr, port, type);
 
 	int socktype;
 	if((type >= NET_SOCKET_TCP) &&
@@ -240,7 +238,7 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 	struct addrinfo* info;
 	if(getaddrinfo(addr, port, &hints, &info) != 0)
 	{
-		LOGE("getaddrinfo addr=%s, port=%s, failed", addr, port);
+		LOGD("getaddrinfo addr=%s, port=%s, failed", addr, port);
 		goto fail_getaddrinfo;
 	}
 
@@ -251,7 +249,7 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 		self->sockfd = socket(i->ai_family, i->ai_socktype, i->ai_protocol);
 		if(self->sockfd == -1)
 		{
-			LOGE("socket failed");
+			LOGD("socket failed");
 			i = i->ai_next;
 			continue;
 		}
@@ -263,7 +261,7 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 			if(setsockopt(self->sockfd, IPPROTO_TCP, TCP_NODELAY, (const void*) &yes,
 			              sizeof(int)) == -1)
 			{
-				LOGW("setsockopt TCP_NODELAY failed");
+				LOGD("setsockopt TCP_NODELAY failed");
 			}
 		}
 
@@ -281,7 +279,7 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 
 	if(self->sockfd == -1)
 	{
-		LOGE("socket failed");
+		LOGD("socket failed");
 		goto fail_socket;
 	}
 
@@ -305,7 +303,6 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 {
 	assert(port);
 	assert(backlog > 0);
-	LOGD("debug port=%s, type=%i, backlog=%i", port, type, backlog);
 
 	int socktype;
 	if((type >= NET_SOCKET_TCP) &&
@@ -347,7 +344,7 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 	struct addrinfo* info;
 	if(getaddrinfo(NULL, port, &hints, &info) != 0)
 	{
-		LOGE("getaddrinfo failed");
+		LOGD("getaddrinfo failed");
 		goto fail_getaddrinfo;
 	}
 
@@ -358,7 +355,7 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 		self->sockfd = socket(i->ai_family, i->ai_socktype, i->ai_protocol);
 		if(self->sockfd == -1)
 		{
-			LOGE("socket failed");
+			LOGD("socket failed");
 			i = i->ai_next;
 			continue;
 		}
@@ -367,14 +364,14 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 		if(setsockopt(self->sockfd, SOL_SOCKET, SO_REUSEADDR, &yes,
 		              sizeof(int)) == -1)
 		{
-			LOGW("setsockopt failed");
+			LOGD("setsockopt failed");
 		}
 
 		// TCP_NODELAY is not needed for server socket
 
 		if(bind(self->sockfd, i->ai_addr, i->ai_addrlen) == -1)
 		{
-			LOGE("bind failed");
+			LOGD("bind failed");
 			close(self->sockfd);
 			self->sockfd = -1;
 			continue;
@@ -386,13 +383,13 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 
 	if(self->sockfd == -1)
 	{
-		LOGE("socket failed");
+		LOGD("socket failed");
 		goto fail_socket;
 	}
 
 	if(listen(self->sockfd, backlog) == -1)
 	{
-		LOGE("listen failed");
+		LOGD("listen failed");
 		goto fail_listen;
 	}
 
@@ -415,14 +412,13 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 net_socket_t* net_socket_accept(net_socket_t* self)
 {
 	assert(self);
-	LOGD("debug");
 
 	struct sockaddr_storage info;
 	socklen_t               size = sizeof(info);
 	int sockfd = accept(self->sockfd, (struct sockaddr*) &info, &size);
 	if(sockfd == -1)
 	{
-		LOGE("accept failed");
+		LOGD("accept failed");
 		return NULL;
 	}
 
@@ -456,7 +452,7 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 		if(setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (const void*) &yes,
 		              sizeof(int)) == -1)
 		{
-			LOGW("setsockopt TCP_NODELAY failed");
+			LOGD("setsockopt TCP_NODELAY failed");
 		}
 	}
 
@@ -479,13 +475,12 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 int net_socket_shutdown(net_socket_t* self, int how)
 {
 	assert(self);
-	LOGD("debug how=%i", how);
 
 	int ret = shutdown(self->sockfd, how);
 	if(ret == -1)
 	{
 		self->error = 1;
-		LOGE("shutdown failed");
+		LOGD("shutdown failed");
 	}
 	// depending on "how" we may or may not be connected
 	// wait until the next recv command to set flag
@@ -500,7 +495,6 @@ void net_socket_close(net_socket_t** _self)
 	net_socket_t* self = *_self;
 	if(self)
 	{
-		LOGD("debug");
 		close(self->sockfd);
 		free(self->buffer);
 		free(self);
@@ -536,7 +530,7 @@ int net_socket_keepalive(net_socket_t* self,
 	}
 	else
 	{
-		LOGE("keepalive failed");
+		LOGD("keepalive failed");
 		return 0;
 	}
 }
@@ -554,7 +548,7 @@ void net_socket_timeout(net_socket_t* self,
 	              (char*) &timeout,
 	              sizeof(timeout)) < 0)
 	{
-		LOGW("setsockopt timeout");
+		LOGD("setsockopt timeout");
 	}
 
 	timeout.tv_sec = send_to;
@@ -562,7 +556,7 @@ void net_socket_timeout(net_socket_t* self,
 	              (char*) &timeout,
 	              sizeof(timeout)) < 0)
 	{
-		LOGW("setsockopt timeout");
+		LOGD("setsockopt timeout");
 	}
 }
 
@@ -570,7 +564,6 @@ int net_socket_sendall(net_socket_t* self, const void* data, int len)
 {
 	assert(self);
 	assert(data);
-	LOGD("debug len=%i", len);
 
 	int buffered = 0;
 	if((self->type == NET_SOCKET_TCP_BUFFERED) &&
@@ -585,7 +578,6 @@ int net_socket_sendall(net_socket_t* self, const void* data, int len)
 int net_socket_flush(net_socket_t* self)
 {
 	assert(self);
-	LOGD("debug");
 
 	int flushed = 1;
 	if((self->type == NET_SOCKET_TCP_BUFFERED) &&
@@ -602,14 +594,13 @@ int net_socket_recv(net_socket_t* self, void* data, int len, int* recvd)
 	assert(self);
 	assert(data);
 	assert(recvd);
-	LOGD("debug len=%i", len);
 
 	int count = recv(self->sockfd, data, len, 0);
 	if(count == -1)
 	{
 		if(self->error == 0)
 		{
-			LOGE("recv failed");
+			LOGD("recv failed");
 		}
 		self->error     = 1;
 		self->connected = 0;
@@ -630,7 +621,6 @@ int net_socket_recvall(net_socket_t* self, void* data, int len, int* recvd)
 	assert(self);
 	assert(data);
 	assert(recvd);
-	LOGD("debug len=%i", len);
 
 	int left  = len;
 	void* buf = data;
@@ -641,7 +631,7 @@ int net_socket_recvall(net_socket_t* self, void* data, int len, int* recvd)
 		{
 			if(self->error == 0)
 			{
-				LOGE("recv failed");
+				LOGD("recv failed");
 			}
 			self->error = 1;
 			goto fail_recv;
@@ -650,7 +640,7 @@ int net_socket_recvall(net_socket_t* self, void* data, int len, int* recvd)
 		{
 			if(self->connected == 1)
 			{
-				LOGE("recv closed");
+				LOGD("recv closed");
 			}
 			goto fail_recv;
 		}
@@ -672,13 +662,11 @@ int net_socket_recvall(net_socket_t* self, void* data, int len, int* recvd)
 int net_socket_error(net_socket_t* self)
 {
 	assert(self);
-	LOGD("debug");
 	return self->error;
 }
 
 int net_socket_connected(net_socket_t* self)
 {
 	assert(self);
-	LOGD("debug");
 	return self->connected;
 }

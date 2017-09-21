@@ -47,7 +47,6 @@ int net_socket_wget(net_socket_t* self,
 	assert(request);
 	assert(_size);
 	assert(_data);
-	LOGD("debug user_agent=%s, request=%s, close=%i", user_agent, request, close);
 
 	// prepare the request
 	const int REQ_SIZE = 4*256;
