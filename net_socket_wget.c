@@ -54,18 +54,18 @@ int net_socket_wget(net_socket_t* self,
 	if(close)
 	{
 		snprintf(req, REQ_SIZE,
-		         "GET %s HTTP/1.1\n"
-		         "Host: %s\n"
-		         "User-Agent: %s\n"
-		         "Connection: close\n\n",
+		         "GET %s HTTP/1.1\r\n"
+		         "Host: %s\r\n"
+		         "User-Agent: %s\r\n"
+		         "Connection: close\r\n\r\n",
 		         request, self->host, user_agent);
 	}
 	else
 	{
 		snprintf(req, REQ_SIZE,
-		         "GET %s HTTP/1.1\n"
-		         "Host: %s\n"
-		         "User-Agent: %s\n\n",
+		         "GET %s HTTP/1.1\r\n"
+		         "Host: %s\r\n"
+		         "User-Agent: %s\r\n\r\n",
 		         request, self->host, user_agent);
 	}
 
