@@ -38,7 +38,8 @@ int net_socket_wget(net_socket_t* self,
                     int* _size, void** _data);
 int net_socket_wserve(net_socket_t* self, int chunked,
                       void* request_priv,
-                      net_socket_request_fn request_fn);
+                      net_socket_request_fn request_fn,
+                      int* close);
 int net_socket_requestFile(void* priv,
                            const char* request,
                            int* _size,

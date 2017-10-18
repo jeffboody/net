@@ -134,10 +134,12 @@ int net_socket_wget(net_socket_t* self,
 
 int net_socket_wserve(net_socket_t* self, int chunked,
                       void* request_priv,
-                      net_socket_request_fn request_fn)
+                      net_socket_request_fn request_fn,
+                      int* close)
 {
 	// request_fn may be NULL
 	assert(self);
+	assert(close);
 
 	if(chunked)
 	{
@@ -185,6 +187,9 @@ int net_socket_wserve(net_socket_t* self, int chunked,
 	}
 
 	free(data);
+
+	// hint to keep socket alive
+	*close = request.close;
 
 	// success
 	return 1;
