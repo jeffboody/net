@@ -89,7 +89,12 @@ int net_socket_wget(net_socket_t* self,
 	http_response_init(&response);
 	if(http_stream_readResponse(&stream, &response) == 0)
 	{
-		self->error = 1;
+		// don't set the error flag if not found
+		// TODO - redesign sockets to handle status codes better
+		if(response.status != HTTP_NOT_FOUND)
+		{
+			self->error = 1;
+		}
 		return 0;
 	}
 
@@ -155,7 +160,8 @@ int net_socket_wserve(net_socket_t* self, int chunked,
 	// read the request
 	if(http_stream_readRequest(&stream, &request) == 0)
 	{
-		goto fail_read;
+		self->error = 1;
+		return 0;
 	}
 
 	// get the request data
@@ -197,9 +203,9 @@ int net_socket_wserve(net_socket_t* self, int chunked,
 	// failure
 	fail_data:
 		free(data);
-	fail_read:
+		// don't set the error flag if not found
+		// TODO - redesign sockets to handle status codes better
 		http_stream_writeError(&stream, HTTP_NOT_FOUND, "Not found");
-		self->error = 1;
 	return 0;
 }
 
