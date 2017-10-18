@@ -104,7 +104,7 @@ static int http_stream_readln(http_stream_t* self, char* line)
 		++pos;
 	}
 
-	LOGE("error pos=%i", pos);
+	LOGD("error pos=%i", pos);
 	return 0;
 }
 
@@ -131,7 +131,7 @@ static int http_request_validate(const char* s)
 	// require leading '/'
 	if(s[0] != '/')
 	{
-		LOGE("invalid request=%s", s);
+		LOGD("invalid request=%s", s);
 		return 0;
 	}
 
@@ -152,7 +152,7 @@ static int http_request_validate(const char* s)
 			continue;
 		}
 
-		LOGE("invalid request=%s", s);
+		LOGD("invalid request=%s", s);
 		return 0;
 	}
 
@@ -291,7 +291,7 @@ int http_stream_readRequest(http_stream_t* self, http_request_t* request)
 			}
 			else
 			{
-				LOGE("invalid method=%i, close=%i, request=%s",
+				LOGD("invalid method=%i, close=%i, request=%s",
 				     request->method, request->close, request->request);
 				return 0;
 			}
@@ -311,7 +311,7 @@ int http_stream_readRequest(http_stream_t* self, http_request_t* request)
 		{
 			if(request->method == HTTP_METHOD_GET)
 			{
-				LOGE("invalid line=%s", line);
+				LOGD("invalid line=%s", line);
 				return 0;
 			}
 
@@ -330,7 +330,7 @@ int http_stream_readRequest(http_stream_t* self, http_request_t* request)
 			}
 			else
 			{
-				LOGE("invalid line=%s", line);
+				LOGD("invalid line=%s", line);
 				return 0;
 			}
 		}
@@ -344,7 +344,7 @@ int http_stream_readRequest(http_stream_t* self, http_request_t* request)
 		}
 	}
 
-	LOGE("invalid request");
+	LOGD("invalid request");
 	return 0;
 }
 
@@ -396,7 +396,7 @@ int http_stream_readchunked(http_stream_t* self, int* _size, char** _data)
 		}
 		else if(size < 0)
 		{
-			LOGE("invalid size=%i", size);
+			LOGD("invalid size=%i", size);
 			goto fail_chunk;
 		}
 
@@ -420,7 +420,7 @@ int http_stream_readchunked(http_stream_t* self, int* _size, char** _data)
 	// check if first chunk was zero length
 	if(recvd == 0)
 	{
-		LOGE("invalid recvd=%i", recvd);
+		LOGD("invalid recvd=%i", recvd);
 		return 0;
 	}
 
