@@ -46,7 +46,8 @@ int main(int argc, const char** argv)
 		goto fail_accept;
 	}
 
-	if(net_socket_wserve(a, 0, NULL, NULL) == 0)
+	int close = 0;
+	if(net_socket_wserve(a, 0, NULL, NULL, &close) == 0)
 	{
 		goto fail_serve;
 	}
