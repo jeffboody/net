@@ -26,6 +26,13 @@
 #include <sys/types.h>
 #include <sys/select.h>
 #include <sys/socket.h>
+#ifdef __APPLE__
+	// for select on iOS
+	#include "TargetConditionals.h"
+	#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+		#include <sys/time.h>
+	#endif
+#endif
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
