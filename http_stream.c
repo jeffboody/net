@@ -146,6 +146,8 @@ static int http_request_validate(const char* s)
 		   (s[i] == '_') ||
 		   (s[i] == '-') ||
 		   (s[i] == '+') ||
+		   (s[i] == '?') ||
+		   (s[i] == '=') ||
 		   (s[i] == '/'))
 		{
 			++i;

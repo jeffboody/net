@@ -158,6 +158,8 @@ static int http_url_parse(http_url_t* self, const char* url)
 	   (strlen(self->filename) <= 0))
 	{
 		LOGE("invalid url=%s", url);
+		LOGE("invalid addr=%s, port=%s, request=%s, filename=%s",
+		     self->addr, self->port, self->request, self->filename);
 		return 0;
 	}
 
