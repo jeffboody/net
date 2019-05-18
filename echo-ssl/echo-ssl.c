@@ -1,0 +1,86 @@
+/*
+ * Copyright (c) 2019 Jeff Boody
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ */
+
+/*
+ * send a message to the server and log received message
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "net/net_socketSSL.h"
+
+#define LOG_TAG "echo"
+#include "net/net_log.h"
+
+int main(int argc, const char** argv)
+{
+	if(argc != 4)
+	{
+		printf("%s addr port message\n", argv[0]);
+		return EXIT_FAILURE;
+	}
+
+	// connect to addr
+	const char* addr = argv[1];
+	const char* port = argv[2];
+	const char* msg  = argv[3];
+	net_socketSSL_t* sock;
+	sock = net_socketSSL_connect(addr, port,
+	                             NET_SOCKETSSL_TCP);
+	if(sock == NULL)
+	{
+		return EXIT_FAILURE;
+	}
+
+	net_socketSSL_timeout(sock, 4, 4);
+
+	int len = strlen(msg) + 1;
+	if(net_socketSSL_sendall(sock, msg, len) == 0)
+	{
+		goto fail_send;
+	}
+
+	char buf[256];
+	int recvd = 0;
+	if(net_socketSSL_recv(sock, buf, 256, &recvd) == 0)
+	{
+		goto fail_recv;
+	}
+	buf[255] = '\0';
+
+	LOGI("send=%s", msg);
+	LOGI("recv=%s", buf);
+
+	net_socketSSL_close(&sock);
+
+	// success
+	return EXIT_SUCCESS;
+
+	// failure
+	fail_recv:
+	fail_send:
+		net_socketSSL_close(&sock);
+	return EXIT_FAILURE;
+}

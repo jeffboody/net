@@ -5,6 +5,33 @@ This net submodule is intended to simplify the network socket API.
 
 Send questions or comments to Jeff Boody - jeffboody@gmail.com
 
+Optional SSL Setup
+==================
+
+Install SSL library:
+
+	sudo apt-get install libssl–dev
+
+Create SSL keys:
+
+	cd sslkeys
+	./make-sslkeys.sh
+
+Test SSL keys (run each command in a separate terminal):
+
+	./test-server.sh
+	./test-client.sh
+
+SSL References
+==============
+
+	Network Security with OpenSSL (O'Reilly)
+	https://github.com/zapstar/two-way-ssl-c
+	https://gist.github.com/zapstar/4b51d7cfa74c7e709fcdaace19233443
+	https://people.freebsd.org/~syrinx/presentations/openssl/OpenSSL-Programming-20140424-01.pdf
+	http://h30266.www3.hpe.com/odl/i64os/opsys/vmsos84/BA554_90007/ch04s03.html
+	https://aticleworld.com/ssl-server-client-using-openssl-in-c/
+
 License
 =======
 
