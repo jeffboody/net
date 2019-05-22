@@ -10,7 +10,7 @@ Optional SSL Setup
 
 Install SSL library:
 
-	sudo apt-get install libssl–dev
+	sudo apt-get install libssl-dev
 
 Create SSL keys:
 
