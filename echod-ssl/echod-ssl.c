@@ -37,6 +37,10 @@ int main(int argc, const char** argv)
 		return EXIT_FAILURE;
 	}
 
+#ifndef NET_SOCKET_USE_OPENSSL_1_1
+	SSL_library_init();
+#endif
+
 	net_socketSSL_t* s;
 	s = net_socketSSL_listen(argv[1], NET_SOCKETSSL_TCP, 1);
 	if(s == NULL)

@@ -277,7 +277,13 @@ net_socketSSL_connect(const char* addr,
 	snprintf(self->host, 256, "%s:%s", addr, port);
 
 	// init SSL ctx
+#if NET_SOCKET_USE_OPENSSL_1_1
 	self->ctx = SSL_CTX_new(TLS_client_method());
+#else
+	// app should call SSL_library_init(); prior to creating any
+	// OpenSSL sockets with the old API
+	self->ctx = SSL_CTX_new(SSLv23_client_method());
+#endif
 	if(self->ctx == NULL)
 	{
 		LOGE("SSL_CTX_new failed");
@@ -292,11 +298,13 @@ net_socketSSL_connect(const char* addr,
 		goto fail_load_verify;
 	}
 
+#if NET_SOCKET_USE_OPENSSL_1_1
 	if(SSL_CTX_set_default_verify_file(self->ctx) != 1)
 	{
 		LOGE("SSL_CTX_set_default_verify_file failed");
 		goto fail_set_default_verify_file;
 	}
+#endif
 
 	if(SSL_CTX_use_certificate_file(self->ctx,
 	                                "client_cert.pem",
@@ -394,7 +402,9 @@ net_socketSSL_connect(const char* addr,
 	fail_check_priv:
 	fail_use_priv:
 	fail_use_cert:
+#if NET_SOCKET_USE_OPENSSL_1_1
 	fail_set_default_verify_file:
+#endif
 	fail_load_verify:
 		SSL_CTX_free(self->ctx);
 	fail_ctx:
@@ -437,7 +447,13 @@ net_socketSSL_listen(const char* port, int type,
 	signal(SIGPIPE, SIG_IGN);
 
 	// init SSL ctx
+#if NET_SOCKET_USE_OPENSSL_1_1
 	self->ctx = SSL_CTX_new(TLS_server_method());
+#else
+	// app should call SSL_library_init(); prior to creating any
+	// OpenSSL sockets with the old API
+	self->ctx = SSL_CTX_new(SSLv23_server_method());
+#endif
 	if(self->ctx == NULL)
 	{
 		LOGE("SSL_CTX_new failed");
@@ -453,11 +469,13 @@ net_socketSSL_listen(const char* port, int type,
 		goto fail_load_verify;
 	}
 
+#if NET_SOCKET_USE_OPENSSL_1_1
 	if(SSL_CTX_set_default_verify_file(self->ctx) != 1)
 	{
 		LOGE("SSL_CTX_set_default_verify_file failed");
 		goto fail_set_default_verify_file;
 	}
+#endif
 
 	STACK_OF(X509_NAME)* cert_names;
 	cert_names = SSL_load_client_CA_file("ca_cert.pem");
@@ -578,7 +596,9 @@ net_socketSSL_listen(const char* port, int type,
 	fail_use_priv:
 	fail_use_cert:
 	fail_cert_names:
+#if NET_SOCKET_USE_OPENSSL_1_1
 	fail_set_default_verify_file:
+#endif
 	fail_load_verify:
 		SSL_CTX_free(self->ctx);
 	fail_ctx:
