@@ -42,10 +42,6 @@ int main(int argc, const char** argv)
 		return EXIT_FAILURE;
 	}
 
-#ifndef NET_SOCKET_USE_OPENSSL_1_1
-	SSL_library_init();
-#endif
-
 	// connect to addr
 	const char* addr = argv[1];
 	const char* port = argv[2];
