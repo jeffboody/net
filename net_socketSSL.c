@@ -683,7 +683,7 @@ net_socketSSL_accept(net_socketSSL_t* self)
 	if(ret != 1)
 	{
 		LOGE("SSL_accept failed %i",
-		     SSL_get_error(self->ssl, ret));
+		     SSL_get_error(remote->ssl, ret));
 		ERR_print_errors_fp(stderr);
 		goto fail_ssl_accept;
 	}
