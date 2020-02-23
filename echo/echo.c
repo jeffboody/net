@@ -29,10 +29,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "net/net_socket.h"
-
 #define LOG_TAG "echo"
-#include "net/net_log.h"
+#include "libcc/cc_log.h"
+#include "net/net_socket.h"
 
 int main(int argc, const char** argv)
 {

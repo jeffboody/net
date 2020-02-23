@@ -21,15 +21,6 @@
  *
  */
 
-#include <stdlib.h>
-#include <assert.h>
-#include <string.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/select.h>
-#include <sys/socket.h>
 #ifdef __APPLE__
 	// for select on iOS
 	#include "TargetConditionals.h"
@@ -39,15 +30,24 @@
 #endif
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <netdb.h>
-#include <signal.h>
-#include <unistd.h>
 #include <openssl/err.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <netdb.h>
+#include <unistd.h>
 
 #include "net_socketSSL.h"
 
 #define LOG_TAG "net"
-#include "net_log.h"
+#include "../libcc/cc_log.h"
+#include "../libcc/cc_memory.h"
 
 /***********************************************************
 * private                                                  *
@@ -56,12 +56,12 @@
 #define NET_SOCKETSSL_BUFSIZE 64*1024
 
 static int
-send_buffered(net_socketSSL_t* self,
-              const void* data, int len)
+send_buffered(net_socketSSL_t* self, const void* data,
+              int len)
 {
-	assert(self);
-	assert(self->buffer);
-	assert(data);
+	ASSERT(self);
+	ASSERT(self->buffer);
+	ASSERT(data);
 	// skip LOGD
 
 	// buffer data
@@ -84,11 +84,11 @@ send_buffered(net_socketSSL_t* self,
 }
 
 static int
-sendall(net_socketSSL_t* self,
-        const void* data, int len, int buffered)
+sendall(net_socketSSL_t* self, const void* data, int len,
+        int buffered)
 {
-	assert(self);
-	assert(data);
+	ASSERT(self);
+	ASSERT(data);
 
 	int left        = len;
 	const void* buf = data;
@@ -124,8 +124,8 @@ static int
 net_socketSSL_connectTimeout(net_socketSSL_t* self,
                              struct addrinfo* i)
 {
-	assert(self);
-	assert(i);
+	ASSERT(self);
+	ASSERT(i);
 
 	// Note: use example.com:81 to test timeouts
 
@@ -225,11 +225,11 @@ net_socketSSL_connectTimeout(net_socketSSL_t* self,
 ***********************************************************/
 
 net_socketSSL_t*
-net_socketSSL_connect(const char* addr,
-                      const char* port, int type)
+net_socketSSL_connect(const char* addr, const char* port,
+                      int type)
 {
-	assert(addr);
-	assert(port);
+	ASSERT(addr);
+	ASSERT(port);
 
 	int socktype;
 	if((type >= NET_SOCKETSSL_TCP) &&
@@ -245,10 +245,10 @@ net_socketSSL_connect(const char* addr,
 
 	net_socketSSL_t* self;
 	self = (net_socketSSL_t*)
-	       malloc(sizeof(net_socketSSL_t));
+	       MALLOC(sizeof(net_socketSSL_t));
 	if(self == NULL)
 	{
-		LOGE("malloc failed");
+		LOGE("MALLOC failed");
 		return NULL;
 	}
 
@@ -259,11 +259,11 @@ net_socketSSL_connect(const char* addr,
 	if(type == NET_SOCKETSSL_TCP_BUFFERED)
 	{
 		self->buffer = (unsigned char*)
-		               malloc(NET_SOCKETSSL_BUFSIZE*
+		               MALLOC(NET_SOCKETSSL_BUFSIZE*
 		                      sizeof(unsigned char));
 		if(self->buffer == NULL)
 		{
-			LOGE("malloc failed");
+			LOGE("MALLOC failed");
 			goto fail_buffer;
 		}
 	}
@@ -341,8 +341,7 @@ net_socketSSL_connect(const char* addr,
 	self->sockfd = -1;
 	while(i)
 	{
-		self->sockfd = socket(i->ai_family,
-		                      i->ai_socktype,
+		self->sockfd = socket(i->ai_family, i->ai_socktype,
 		                      i->ai_protocol);
 		if(self->sockfd == -1)
 		{
@@ -355,9 +354,8 @@ net_socketSSL_connect(const char* addr,
 		   (type == NET_SOCKETSSL_TCP_BUFFERED))
 		{
 			int yes = 1;
-			if(setsockopt(self->sockfd, IPPROTO_TCP,
-			              TCP_NODELAY, (const void*) &yes,
-			              sizeof(int)) == -1)
+			if(setsockopt(self->sockfd, IPPROTO_TCP, TCP_NODELAY,
+			              (const void*) &yes, sizeof(int)) == -1)
 			{
 				LOGD("setsockopt TCP_NODELAY failed");
 			}
@@ -398,9 +396,9 @@ net_socketSSL_connect(const char* addr,
 	fail_load_verify:
 		SSL_CTX_free(self->ctx);
 	fail_ctx:
-		free(self->buffer);
+		FREE(self->buffer);
 	fail_buffer:
-		free(self);
+		FREE(self);
 	return NULL;
 }
 
@@ -408,8 +406,8 @@ net_socketSSL_t*
 net_socketSSL_listen(const char* port, int type,
                      int backlog)
 {
-	assert(port);
-	assert(backlog > 0);
+	ASSERT(port);
+	ASSERT(backlog > 0);
 
 	int socktype;
 	if((type >= NET_SOCKETSSL_TCP) &&
@@ -425,10 +423,10 @@ net_socketSSL_listen(const char* port, int type,
 
 	net_socketSSL_t* self;
 	self = (net_socketSSL_t*)
-	       malloc(sizeof(net_socketSSL_t));
+	       MALLOC(sizeof(net_socketSSL_t));
 	if(self == NULL)
 	{
-		LOGE("malloc failed");
+		LOGE("MALLOC failed");
 		return NULL;
 	}
 
@@ -446,8 +444,8 @@ net_socketSSL_listen(const char* port, int type,
 	self->method = NET_SOCKETSSL_METHOD_SERVER;
 	self->ssl    = NULL;
 
-	if(SSL_CTX_load_verify_locations(self->ctx,
-	                                 "ca_cert.pem", NULL) != 1)
+	if(SSL_CTX_load_verify_locations(self->ctx, "ca_cert.pem",
+	                                 NULL) != 1)
 	{
 		LOGE("SSL_CTX_load_verify_locations failed");
 		goto fail_load_verify;
@@ -528,17 +526,15 @@ net_socketSSL_listen(const char* port, int type,
 		}
 
 		int yes = 1;
-		if(setsockopt(self->sockfd, SOL_SOCKET,
-		              SO_REUSEADDR, &yes,
-		              sizeof(int)) == -1)
+		if(setsockopt(self->sockfd, SOL_SOCKET, SO_REUSEADDR,
+		              &yes, sizeof(int)) == -1)
 		{
 			LOGD("setsockopt failed");
 		}
 
 		// TCP_NODELAY is not needed for server socket
 
-		if(bind(self->sockfd, i->ai_addr,
-		        i->ai_addrlen) == -1)
+		if(bind(self->sockfd, i->ai_addr, i->ai_addrlen) == -1)
 		{
 			LOGD("bind failed");
 			close(self->sockfd);
@@ -582,20 +578,19 @@ net_socketSSL_listen(const char* port, int type,
 	fail_load_verify:
 		SSL_CTX_free(self->ctx);
 	fail_ctx:
-		free(self);
+		FREE(self);
 	return NULL;
 }
 
 net_socketSSL_t*
 net_socketSSL_accept(net_socketSSL_t* self)
 {
-	assert(self);
+	ASSERT(self);
 
 	struct sockaddr_storage info;
 	socklen_t               size = sizeof(info);
 	int sockfd = accept(self->sockfd,
-	                    (struct sockaddr*) &info,
-	                    &size);
+	                    (struct sockaddr*) &info, &size);
 	if(sockfd == -1)
 	{
 		LOGD("accept failed");
@@ -604,10 +599,10 @@ net_socketSSL_accept(net_socketSSL_t* self)
 
 	net_socketSSL_t* remote;
 	remote = (net_socketSSL_t*)
-	         malloc(sizeof(net_socketSSL_t));
+	         MALLOC(sizeof(net_socketSSL_t));
 	if(remote == NULL)
 	{
-		LOGE("malloc failed");
+		LOGE("MALLOC failed");
 		goto fail_remote;
 	}
 
@@ -615,11 +610,11 @@ net_socketSSL_accept(net_socketSSL_t* self)
 	if(type == NET_SOCKETSSL_TCP_BUFFERED)
 	{
 		remote->buffer = (unsigned char*)
-		                 malloc(NET_SOCKETSSL_BUFSIZE*
+		                 MALLOC(NET_SOCKETSSL_BUFSIZE*
 		                        sizeof(unsigned char));
 		if(remote->buffer == NULL)
 		{
-			LOGE("malloc failed");
+			LOGE("MALLOC failed");
 			goto fail_buffer;
 		}
 	}
@@ -633,9 +628,8 @@ net_socketSSL_accept(net_socketSSL_t* self)
 	   (type == NET_SOCKETSSL_TCP_BUFFERED))
 	{
 		int yes = 1;
-		if(setsockopt(sockfd, IPPROTO_TCP,
-		              TCP_NODELAY, (const void*) &yes,
-		              sizeof(int)) == -1)
+		if(setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
+		              (const void*) &yes, sizeof(int)) == -1)
 		{
 			LOGD("setsockopt TCP_NODELAY failed");
 		}
@@ -688,9 +682,9 @@ net_socketSSL_accept(net_socketSSL_t* self)
 	fail_set_fd:
 		SSL_free(remote->ssl);
 	fail_ssl:
-		free(remote->buffer);
+		FREE(remote->buffer);
 	fail_buffer:
-		free(remote);
+		FREE(remote);
 	fail_remote:
 		close(sockfd);
 	return NULL;
@@ -698,7 +692,7 @@ net_socketSSL_accept(net_socketSSL_t* self)
 
 int net_socketSSL_shutdown(net_socketSSL_t* self, int how)
 {
-	assert(self);
+	ASSERT(self);
 
 	int ret = shutdown(self->sockfd, how);
 	if(ret == -1)
@@ -714,7 +708,7 @@ int net_socketSSL_shutdown(net_socketSSL_t* self, int how)
 void net_socketSSL_close(net_socketSSL_t** _self)
 {
 	// *_self can be NULL
-	assert(_self);
+	ASSERT(_self);
 
 	net_socketSSL_t* self = *_self;
 	if(self)
@@ -730,8 +724,8 @@ void net_socketSSL_close(net_socketSSL_t** _self)
 		{
 			SSL_CTX_free(self->ctx);
 		}
-		free(self->buffer);
-		free(self);
+		FREE(self->buffer);
+		FREE(self);
 		*_self = NULL;
 	}
 }
@@ -739,7 +733,7 @@ void net_socketSSL_close(net_socketSSL_t** _self)
 int net_socketSSL_keepalive(net_socketSSL_t* self,
                          int cnt, int idle, int intvl)
 {
-	assert(self);
+	ASSERT(self);
 
 	// default values take over 2 hours to reconnect
 	// my recommended values take about 2 minutes to reconnect
@@ -772,23 +766,21 @@ int net_socketSSL_keepalive(net_socketSSL_t* self,
 void net_socketSSL_timeout(net_socketSSL_t* self,
                         int recv_to, int send_to)
 {
-	assert(self);
+	ASSERT(self);
 
 	struct timeval timeout;
 	timeout.tv_sec  = recv_to;
 	timeout.tv_usec = 0;
 
 	if(setsockopt(self->sockfd, SOL_SOCKET, SO_RCVTIMEO,
-	              (char*) &timeout,
-	              sizeof(timeout)) < 0)
+	              (char*) &timeout, sizeof(timeout)) < 0)
 	{
 		LOGD("setsockopt timeout");
 	}
 
 	timeout.tv_sec = send_to;
 	if(setsockopt(self->sockfd, SOL_SOCKET, SO_SNDTIMEO,
-	              (char*) &timeout,
-	              sizeof(timeout)) < 0)
+	              (char*) &timeout, sizeof(timeout)) < 0)
 	{
 		LOGD("setsockopt timeout");
 	}
@@ -797,8 +789,8 @@ void net_socketSSL_timeout(net_socketSSL_t* self,
 int net_socketSSL_sendall(net_socketSSL_t* self,
                           const void* data, int len)
 {
-	assert(self);
-	assert(data);
+	ASSERT(self);
+	ASSERT(data);
 
 	int buffered = 0;
 	if((self->type == NET_SOCKETSSL_TCP_BUFFERED) &&
@@ -812,7 +804,7 @@ int net_socketSSL_sendall(net_socketSSL_t* self,
 
 int net_socketSSL_flush(net_socketSSL_t* self)
 {
-	assert(self);
+	ASSERT(self);
 
 	int flushed = 1;
 	if((self->type == NET_SOCKETSSL_TCP_BUFFERED) &&
@@ -827,9 +819,9 @@ int net_socketSSL_flush(net_socketSSL_t* self)
 int net_socketSSL_recv(net_socketSSL_t* self, void* data,
                        int len, int* recvd)
 {
-	assert(self);
-	assert(data);
-	assert(recvd);
+	ASSERT(self);
+	ASSERT(data);
+	ASSERT(recvd);
 
 	int count = SSL_read(self->ssl, data, len);
 	if(count <= 0)
@@ -859,9 +851,9 @@ int net_socketSSL_recv(net_socketSSL_t* self, void* data,
 int net_socketSSL_recvall(net_socketSSL_t* self,
                           void* data, int len, int* recvd)
 {
-	assert(self);
-	assert(data);
-	assert(recvd);
+	ASSERT(self);
+	ASSERT(data);
+	ASSERT(recvd);
 
 	int left  = len;
 	void* buf = data;
@@ -905,12 +897,12 @@ int net_socketSSL_recvall(net_socketSSL_t* self,
 
 int net_socketSSL_error(net_socketSSL_t* self)
 {
-	assert(self);
+	ASSERT(self);
 	return self->error;
 }
 
 int net_socketSSL_connected(net_socketSSL_t* self)
 {
-	assert(self);
+	ASSERT(self);
 	return self->connected;
 }

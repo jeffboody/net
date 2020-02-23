@@ -1,5 +1,5 @@
 TARGET   = libnet.a
-CLASS    = net_socket net_socket_wget net_log http_stream
+CLASS    = net_socket net_socket_wget http_stream
 ifeq ($(NET_SOCKET_USE_SSL),1)
 	CLASS += net_socketSSL
 endif

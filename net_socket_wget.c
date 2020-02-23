@@ -21,16 +21,16 @@
  *
  */
 
-#include "net_socket.h"
-#include "net_socket_wget.h"
-#include "http_stream.h"
-#include <stdlib.h>
-#include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define LOG_TAG "net"
-#include "net_log.h"
+#include "../libcc/cc_log.h"
+#include "../libcc/cc_memory.h"
+#include "http_stream.h"
+#include "net_socket.h"
+#include "net_socket_wget.h"
 
 /***********************************************************
 * public                                                   *
@@ -38,15 +38,14 @@
 
 int net_socket_wget(net_socket_t* self,
                     const char* user_agent,
-                    const char* request,
-                    int close,
+                    const char* request, int close,
                     int* _size, void** _data)
 {
-	assert(self);
-	assert(user_agent);
-	assert(request);
-	assert(_size);
-	assert(_data);
+	ASSERT(self);
+	ASSERT(user_agent);
+	ASSERT(request);
+	ASSERT(_size);
+	ASSERT(_data);
 
 	// prepare the request
 	const int REQ_SIZE = 4*256;
@@ -101,7 +100,8 @@ int net_socket_wget(net_socket_t* self,
 	// read data
 	if(response.chunked)
 	{
-		if(http_stream_readchunked(&stream, _size, (char**) _data) == 0)
+		if(http_stream_readchunked(&stream, _size,
+		                           (char**) _data) == 0)
 		{
 			goto fail_data;
 		}
@@ -109,10 +109,10 @@ int net_socket_wget(net_socket_t* self,
 	else
 	{
 		int   size = response.content_length;
-		char* data = (char*) realloc(*_data, size*sizeof(char));
+		char* data = (char*) REALLOC(*_data, size*sizeof(char));
 		if(data == NULL)
 		{
-			LOGE("malloc failed");
+			LOGE("REALLOC failed");
 			self->error = 1;
 			return 0;
 		}
@@ -130,7 +130,7 @@ int net_socket_wget(net_socket_t* self,
 
 	// failure
 	fail_data:
-		free(*_data);
+		FREE(*_data);
 		*_data = NULL;
 		*_size = 0;
 		self->error = 1;
@@ -143,8 +143,8 @@ int net_socket_wserve(net_socket_t* self, int chunked,
                       int* close)
 {
 	// request_fn may be NULL
-	assert(self);
-	assert(close);
+	ASSERT(self);
+	ASSERT(close);
 
 	if(chunked)
 	{
@@ -188,11 +188,11 @@ int net_socket_wserve(net_socket_t* self, int chunked,
 	{
 		// don't call writeError
 		self->error = 1;
-		free(data);
+		FREE(data);
 		return 0;
 	}
 
-	free(data);
+	FREE(data);
 
 	// hint to keep socket alive
 	*close = request.close;
@@ -202,22 +202,21 @@ int net_socket_wserve(net_socket_t* self, int chunked,
 
 	// failure
 	fail_data:
-		free(data);
+		FREE(data);
 		// don't set the error flag if not found
 		// TODO - redesign sockets to handle status codes better
-		http_stream_writeError(&stream, HTTP_NOT_FOUND, "Not found");
+		http_stream_writeError(&stream, HTTP_NOT_FOUND,
+		                       "Not found");
 	return 0;
 }
 
-int net_socket_requestFile(void* priv,
-                           const char* request,
-                           int* _size,
-                           void** _data)
+int net_socket_requestFile(void* priv, const char* request,
+                           int* _size, void** _data)
 {
-	assert(priv == NULL);
-	assert(request);
-	assert(_size);
-	assert(_data);
+	ASSERT(priv == NULL);
+	ASSERT(request);
+	ASSERT(_size);
+	ASSERT(_data);
 
 	// remove the leading '/'
 	const char* fname = &(request[1]);
@@ -235,10 +234,10 @@ int net_socket_requestFile(void* priv,
 	fseek(f, 0, SEEK_SET);
 	*_size = size;
 
-	char* data = (char*) realloc(*_data, size*sizeof(char));
+	char* data = (char*) REALLOC(*_data, size*sizeof(char));
 	if(data == NULL)
 	{
-		LOGE("realloc failed");
+		LOGE("REALLOC failed");
 		goto fail_realloc;
 	}
 	*_data = data;

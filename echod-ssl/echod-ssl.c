@@ -25,9 +25,10 @@
  * echo runs as a server and returns any messages it receives
  */
 
-#include "net/net_socketSSL.h"
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "net/net_socketSSL.h"
 
 int main(int argc, const char** argv)
 {

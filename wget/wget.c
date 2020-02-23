@@ -21,15 +21,15 @@
  *
  */
 
-#include "net/net_socket.h"
-#include "net/net_socket_wget.h"
 #include <stdlib.h>
-#include <assert.h>
 #include <string.h>
 #include <stdio.h>
 
 #define LOG_TAG "net"
-#include "net/net_log.h"
+#include "libcc/cc_log.h"
+#include "libcc/cc_memory.h"
+#include "net/net_socket.h"
+#include "net/net_socket_wget.h"
 
 typedef struct
 {
@@ -41,7 +41,7 @@ typedef struct
 
 static const char* findc(const char* s, const char* e, char c)
 {
-	assert(s);
+	ASSERT(s);
 
 	if(e)
 	{
@@ -71,7 +71,7 @@ static const char* findc(const char* s, const char* e, char c)
 
 static const char* findn(const char* s, char c)
 {
-	assert(s);
+	ASSERT(s);
 
 	const char* p = NULL;
 	while(*s != '\0')
@@ -88,8 +88,8 @@ static const char* findn(const char* s, char c)
 
 static int http_url_parse(http_url_t* self, const char* url)
 {
-	assert(self);
-	assert(url);
+	ASSERT(self);
+	ASSERT(url);
 	LOGD("debug url=%s", url);
 
 	// http://addr:port/request
@@ -159,7 +159,8 @@ static int http_url_parse(http_url_t* self, const char* url)
 	{
 		LOGE("invalid url=%s", url);
 		LOGE("invalid addr=%s, port=%s, request=%s, filename=%s",
-		     self->addr, self->port, self->request, self->filename);
+		     self->addr, self->port, self->request,
+		     self->filename);
 		return 0;
 	}
 
@@ -187,9 +188,9 @@ int main(int argc, const char** argv)
 	}
 
 	// connect to addr
-	net_socket_t* sock = net_socket_connect(url.addr,
-	                                        url.port,
-	                                        NET_SOCKET_TCP);
+	net_socket_t* sock;
+	sock = net_socket_connect(url.addr, url.port,
+	                          NET_SOCKET_TCP);
 	if(sock == NULL)
 	{
 		return EXIT_FAILURE;
@@ -222,7 +223,7 @@ int main(int argc, const char** argv)
 
 	// cleanup
 	fclose(f);
-	free(data);
+	FREE(data);
 	net_socket_close(&sock);
 
 	// success
@@ -232,7 +233,7 @@ int main(int argc, const char** argv)
 	fail_fwrite:
 		fclose(f);
 	fail_fopen:
-		free(data);
+		FREE(data);
 		net_socket_close(&sock);
 	return EXIT_FAILURE;
 }

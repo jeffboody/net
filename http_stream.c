@@ -21,15 +21,15 @@
  *
  */
 
-#include "http_stream.h"
-#include <stdlib.h>
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
 #include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define LOG_TAG "net"
-#include "net_log.h"
+#include "../libcc/cc_log.h"
+#include "../libcc/cc_memory.h"
+#include "http_stream.h"
 
 /***********************************************************
 * private                                                  *
@@ -37,7 +37,7 @@
 
 static int http_stream_read(http_stream_t* self)
 {
-	assert(self);
+	ASSERT(self);
 	LOGD("debug");
 
 	if(self->size > 0)
@@ -59,8 +59,8 @@ static int http_stream_read(http_stream_t* self)
 
 static int http_stream_getc(http_stream_t* self, char* c)
 {
-	assert(self);
-	assert(c);
+	ASSERT(self);
+	ASSERT(c);
 	LOGD("debug");
 
 	if(http_stream_read(self) == 0)
@@ -75,10 +75,11 @@ static int http_stream_getc(http_stream_t* self, char* c)
 	return 1;
 }
 
-static int http_stream_readln(http_stream_t* self, char* line)
+static int
+http_stream_readln(http_stream_t* self, char* line)
 {
-	assert(self);
-	assert(line);
+	ASSERT(self);
+	ASSERT(line);
 	LOGD("debug");
 
 	char c;
@@ -110,8 +111,8 @@ static int http_stream_readln(http_stream_t* self, char* line)
 
 static int http_stream_readi(http_stream_t* self, int* x)
 {
-	assert(self);
-	assert(x);
+	ASSERT(self);
+	ASSERT(x);
 	LOGD("debug");
 
 	char line[256];
@@ -126,7 +127,7 @@ static int http_stream_readi(http_stream_t* self, int* x)
 
 static int http_request_validate(const char* s)
 {
-	assert(s);
+	ASSERT(s);
 
 	// require leading '/'
 	if(s[0] != '/')
@@ -167,7 +168,7 @@ static int http_request_validate(const char* s)
 
 void http_response_init(http_response_t* self)
 {
-	assert(self);
+	ASSERT(self);
 	LOGD("debug");
 
 	self->status         = 0;
@@ -177,7 +178,7 @@ void http_response_init(http_response_t* self)
 
 void http_request_init(http_request_t* self)
 {
-	assert(self);
+	ASSERT(self);
 	LOGD("debug");
 
 	self->method = HTTP_METHOD_NONE;
@@ -187,9 +188,10 @@ void http_request_init(http_request_t* self)
 	self->request[255] = '\0';
 }
 
-void http_stream_init(http_stream_t* self, net_socket_t* sock)
+void http_stream_init(http_stream_t* self,
+                      net_socket_t* sock)
 {
-	assert(self);
+	ASSERT(self);
 	LOGD("debug");
 
 	self->sock = sock;
@@ -200,8 +202,8 @@ void http_stream_init(http_stream_t* self, net_socket_t* sock)
 int http_stream_readResponse(http_stream_t* self,
                              http_response_t* response)
 {
-	assert(self);
-	assert(response);
+	ASSERT(self);
+	ASSERT(response);
 	LOGD("debug");
 
 	/*
@@ -235,7 +237,8 @@ int http_stream_readResponse(http_stream_t* self,
 			else
 			{
 				LOGD("invalid status=%i, content_length=%i, chunked=%i",
-				     response->status, response->content_length, response->chunked);
+				     response->status, response->content_length,
+				     response->chunked);
 				return 0;
 			}
 		}
@@ -255,7 +258,8 @@ int http_stream_readResponse(http_stream_t* self,
 		{
 			response->content_length = i;
 		}
-		else if(strncmp(line, "TRANSFER-ENCODING: CHUNKED", 256) == 0)
+		else if(strncmp(line, "TRANSFER-ENCODING: CHUNKED",
+		        256) == 0)
 		{
 			response->chunked = 1;
 		}
@@ -269,10 +273,11 @@ int http_stream_readResponse(http_stream_t* self,
 	return 0;
 }
 
-int http_stream_readRequest(http_stream_t* self, http_request_t* request)
+int http_stream_readRequest(http_stream_t* self,
+                            http_request_t* request)
 {
-	assert(self);
-	assert(request);
+	ASSERT(self);
+	ASSERT(request);
 	LOGD("debug");
 
 	/*
@@ -294,7 +299,8 @@ int http_stream_readRequest(http_stream_t* self, http_request_t* request)
 			else
 			{
 				LOGD("invalid method=%i, close=%i, request=%s",
-				     request->method, request->close, request->request);
+				     request->method, request->close,
+				     request->request);
 				return 0;
 			}
 		}
@@ -350,10 +356,11 @@ int http_stream_readRequest(http_stream_t* self, http_request_t* request)
 	return 0;
 }
 
-int http_stream_readd(http_stream_t* self, int size, char* data)
+int http_stream_readd(http_stream_t* self, int size,
+                      char* data)
 {
-	assert(self);
-	assert(data);
+	ASSERT(self);
+	ASSERT(data);
 	LOGD("debug size=%i", size);
 
 	while(size > 0)
@@ -374,11 +381,12 @@ int http_stream_readd(http_stream_t* self, int size, char* data)
 	return 1;
 }
 
-int http_stream_readchunked(http_stream_t* self, int* _size, char** _data)
+int http_stream_readchunked(http_stream_t* self,
+                            int* _size, char** _data)
 {
-	assert(self);
-	assert(_size);
-	assert(_data);
+	ASSERT(self);
+	ASSERT(_size);
+	ASSERT(_data);
 	LOGD("debug");
 
 	// read data
@@ -402,10 +410,10 @@ int http_stream_readchunked(http_stream_t* self, int* _size, char** _data)
 			goto fail_chunk;
 		}
 
-		char* data = (char*) realloc(*_data, recvd + size);
+		char* data = (char*) REALLOC(*_data, recvd + size);
 		if(data == NULL)
 		{
-			LOGE("realloc failed");
+			LOGE("REALLOC failed");
 			goto fail_chunk;
 		}
 		*_data = data;
@@ -446,7 +454,7 @@ int http_stream_readchunked(http_stream_t* self, int* _size, char** _data)
 	// failure
 	fail_footer:
 	fail_chunk:
-		free(*_data);
+		FREE(*_data);
 		*_data = NULL;
 		*_size = 0;
 	return 0;
@@ -455,8 +463,8 @@ int http_stream_readchunked(http_stream_t* self, int* _size, char** _data)
 void http_stream_writeError(http_stream_t* self,
                             int err, const char* reason)
 {
-	assert(self);
-	assert(reason);
+	ASSERT(self);
+	ASSERT(reason);
 
 	/*
 	 * HTTP/1.1 <status> <string>
@@ -476,8 +484,8 @@ void http_stream_writeError(http_stream_t* self,
 int http_stream_writeData(http_stream_t* self,
                           int size, void* data)
 {
-	assert(self);
-	assert(data);
+	ASSERT(self);
+	ASSERT(data);
 
 	/*
 	 * HTTP/1.1 <status> <string>

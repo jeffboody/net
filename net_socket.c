@@ -21,11 +21,6 @@
  *
  */
 
-#include <fcntl.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/select.h>
-#include <sys/socket.h>
 #ifdef __APPLE__
 	// for select on iOS
 	#include "TargetConditionals.h"
@@ -35,18 +30,22 @@
 #endif
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
-#include "net_socket.h"
-#include <stdlib.h>
-#include <assert.h>
-#include <string.h>
-#include <stdio.h>
-
 #define LOG_TAG "net"
-#include "net_log.h"
+#include "../libcc/cc_log.h"
+#include "../libcc/cc_memory.h"
+#include "net_socket.h"
 
 /***********************************************************
 * private                                                  *
@@ -54,11 +53,12 @@
 
 #define NET_SOCKET_BUFSIZE 64*1024
 
-static int send_buffered(net_socket_t* self, const void* data, int len)
+static int
+send_buffered(net_socket_t* self, const void* data, int len)
 {
-	assert(self);
-	assert(self->buffer);
-	assert(data);
+	ASSERT(self);
+	ASSERT(self->buffer);
+	ASSERT(data);
 	// skip LOGD
 
 	// buffer data
@@ -80,10 +80,12 @@ static int send_buffered(net_socket_t* self, const void* data, int len)
 	return len_copy;
 }
 
-static int sendall(net_socket_t* self, const void* data, int len, int buffered)
+static int
+sendall(net_socket_t* self, const void* data, int len,
+        int buffered)
 {
-	assert(self);
-	assert(data);
+	ASSERT(self);
+	ASSERT(data);
 
 	int left        = len;
 	const void* buf = data;
@@ -118,8 +120,8 @@ static int sendall(net_socket_t* self, const void* data, int len, int buffered)
 static int net_socket_connectTimeout(net_socket_t* self,
                                      struct addrinfo* i)
 {
-	assert(self);
-	assert(i);
+	ASSERT(self);
+	ASSERT(i);
 
 	// Note: use example.com:81 to test timeouts
 
@@ -187,10 +189,12 @@ static int net_socket_connectTimeout(net_socket_t* self,
 * public                                                   *
 ***********************************************************/
 
-net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
+net_socket_t*
+net_socket_connect(const char* addr, const char* port,
+                   int type)
 {
-	assert(addr);
-	assert(port);
+	ASSERT(addr);
+	ASSERT(port);
 
 	int socktype;
 	if((type >= NET_SOCKET_TCP) &&
@@ -208,10 +212,11 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 		return NULL;
 	}
 
-	net_socket_t* self = (net_socket_t*) malloc(sizeof(net_socket_t));
+	net_socket_t* self;
+	self = (net_socket_t*) MALLOC(sizeof(net_socket_t));
 	if(self == NULL)
 	{
-		LOGE("malloc failed");
+		LOGE("MALLOC failed");
 		return NULL;
 	}
 
@@ -221,10 +226,12 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 
 	if(type == NET_SOCKET_TCP_BUFFERED)
 	{
-		self->buffer = (unsigned char*) malloc(NET_SOCKET_BUFSIZE*sizeof(unsigned char));
+		self->buffer = (unsigned char*)
+		               MALLOC(NET_SOCKET_BUFSIZE*
+		                      sizeof(unsigned char));
 		if(self->buffer == NULL)
 		{
-			LOGE("malloc failed");
+			LOGE("MALLOC failed");
 			goto fail_buffer;
 		}
 	}
@@ -253,7 +260,8 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 	self->sockfd = -1;
 	while(i)
 	{
-		self->sockfd = socket(i->ai_family, i->ai_socktype, i->ai_protocol);
+		self->sockfd = socket(i->ai_family, i->ai_socktype,
+		                      i->ai_protocol);
 		if(self->sockfd == -1)
 		{
 			LOGD("socket failed");
@@ -265,8 +273,8 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 		   (type == NET_SOCKET_TCP_BUFFERED))
 		{
 			int yes = 1;
-			if(setsockopt(self->sockfd, IPPROTO_TCP, TCP_NODELAY, (const void*) &yes,
-			              sizeof(int)) == -1)
+			if(setsockopt(self->sockfd, IPPROTO_TCP, TCP_NODELAY,
+			              (const void*) &yes, sizeof(int)) == -1)
 			{
 				LOGD("setsockopt TCP_NODELAY failed");
 			}
@@ -300,16 +308,17 @@ net_socket_t* net_socket_connect(const char* addr, const char* port, int type)
 	// failure
 	fail_socket:
 	fail_getaddrinfo:
-		free(self->buffer);
+		FREE(self->buffer);
 	fail_buffer:
-		free(self);
+		FREE(self);
 	return NULL;
 }
 
-net_socket_t* net_socket_listen(const char* port, int type, int backlog)
+net_socket_t*
+net_socket_listen(const char* port, int type, int backlog)
 {
-	assert(port);
-	assert(backlog > 0);
+	ASSERT(port);
+	ASSERT(backlog > 0);
 
 	int socktype;
 	if((type >= NET_SOCKET_TCP) &&
@@ -327,10 +336,11 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 		return NULL;
 	}
 
-	net_socket_t* self = (net_socket_t*) malloc(sizeof(net_socket_t));
+	net_socket_t* self;
+	self = (net_socket_t*) MALLOC(sizeof(net_socket_t));
 	if(self == NULL)
 	{
-		LOGE("malloc failed");
+		LOGE("MALLOC failed");
 		return NULL;
 	}
 
@@ -359,7 +369,8 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 	self->sockfd = -1;
 	while(i)
 	{
-		self->sockfd = socket(i->ai_family, i->ai_socktype, i->ai_protocol);
+		self->sockfd = socket(i->ai_family, i->ai_socktype,
+		                      i->ai_protocol);
 		if(self->sockfd == -1)
 		{
 			LOGD("socket failed");
@@ -412,13 +423,13 @@ net_socket_t* net_socket_listen(const char* port, int type, int backlog)
 		close(self->sockfd);
 	fail_socket:
 	fail_getaddrinfo:
-		free(self);
+		FREE(self);
 	return NULL;
 }
 
 net_socket_t* net_socket_accept(net_socket_t* self)
 {
-	assert(self);
+	ASSERT(self);
 
 	struct sockaddr_storage info;
 	socklen_t               size = sizeof(info);
@@ -429,20 +440,23 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 		return NULL;
 	}
 
-	net_socket_t* remote = (net_socket_t*) malloc(sizeof(net_socket_t));
+	net_socket_t* remote;
+	remote = (net_socket_t*) MALLOC(sizeof(net_socket_t));
 	if(remote == NULL)
 	{
-		LOGE("malloc failed");
+		LOGE("MALLOC failed");
 		goto fail_remote;
 	}
 
 	int type = self->type;
 	if(type == NET_SOCKET_TCP_BUFFERED)
 	{
-		remote->buffer = (unsigned char*) malloc(NET_SOCKET_BUFSIZE*sizeof(unsigned char));
+		remote->buffer = (unsigned char*)
+		                 MALLOC(NET_SOCKET_BUFSIZE*
+		                        sizeof(unsigned char));
 		if(remote->buffer == NULL)
 		{
-			LOGE("malloc failed");
+			LOGE("MALLOC failed");
 			goto fail_buffer;
 		}
 	}
@@ -456,8 +470,8 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 	   (type == NET_SOCKET_TCP_BUFFERED))
 	{
 		int yes = 1;
-		if(setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (const void*) &yes,
-		              sizeof(int)) == -1)
+		if(setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
+		              (const void*) &yes, sizeof(int)) == -1)
 		{
 			LOGD("setsockopt TCP_NODELAY failed");
 		}
@@ -473,7 +487,7 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 
 	// failure
 	fail_buffer:
-		free(remote);
+		FREE(remote);
 	fail_remote:
 		close(sockfd);
 	return NULL;
@@ -481,7 +495,7 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 
 int net_socket_shutdown(net_socket_t* self, int how)
 {
-	assert(self);
+	ASSERT(self);
 
 	int ret = shutdown(self->sockfd, how);
 	if(ret == -1)
@@ -497,22 +511,22 @@ int net_socket_shutdown(net_socket_t* self, int how)
 void net_socket_close(net_socket_t** _self)
 {
 	// *_self can be NULL
-	assert(_self);
+	ASSERT(_self);
 
 	net_socket_t* self = *_self;
 	if(self)
 	{
 		close(self->sockfd);
-		free(self->buffer);
-		free(self);
+		FREE(self->buffer);
+		FREE(self);
 		*_self = NULL;
 	}
 }
 
-int net_socket_keepalive(net_socket_t* self,
-                         int cnt, int idle, int intvl)
+int net_socket_keepalive(net_socket_t* self, int cnt,
+                         int idle, int intvl)
 {
-	assert(self);
+	ASSERT(self);
 
 	// default values take over 2 hours to reconnect
 	// my recommended values take about 2 minutes to reconnect
@@ -545,7 +559,7 @@ int net_socket_keepalive(net_socket_t* self,
 void net_socket_timeout(net_socket_t* self,
                         int recv_to, int send_to)
 {
-	assert(self);
+	ASSERT(self);
 
 	struct timeval timeout;
 	timeout.tv_sec  = recv_to;
@@ -567,10 +581,11 @@ void net_socket_timeout(net_socket_t* self,
 	}
 }
 
-int net_socket_sendall(net_socket_t* self, const void* data, int len)
+int net_socket_sendall(net_socket_t* self,
+                       const void* data, int len)
 {
-	assert(self);
-	assert(data);
+	ASSERT(self);
+	ASSERT(data);
 
 	int buffered = 0;
 	if((self->type == NET_SOCKET_TCP_BUFFERED) &&
@@ -584,7 +599,7 @@ int net_socket_sendall(net_socket_t* self, const void* data, int len)
 
 int net_socket_flush(net_socket_t* self)
 {
-	assert(self);
+	ASSERT(self);
 
 	int flushed = 1;
 	if((self->type == NET_SOCKET_TCP_BUFFERED) &&
@@ -596,11 +611,12 @@ int net_socket_flush(net_socket_t* self)
 	return flushed;
 }
 
-int net_socket_recv(net_socket_t* self, void* data, int len, int* recvd)
+int net_socket_recv(net_socket_t* self, void* data,
+                    int len, int* recvd)
 {
-	assert(self);
-	assert(data);
-	assert(recvd);
+	ASSERT(self);
+	ASSERT(data);
+	ASSERT(recvd);
 
 	int count = recv(self->sockfd, data, len, 0);
 	if(count == -1)
@@ -623,11 +639,12 @@ int net_socket_recv(net_socket_t* self, void* data, int len, int* recvd)
 	return 1;
 }
 
-int net_socket_recvall(net_socket_t* self, void* data, int len, int* recvd)
+int net_socket_recvall(net_socket_t* self, void* data,
+                       int len, int* recvd)
 {
-	assert(self);
-	assert(data);
-	assert(recvd);
+	ASSERT(self);
+	ASSERT(data);
+	ASSERT(recvd);
 
 	int left  = len;
 	void* buf = data;
@@ -668,12 +685,12 @@ int net_socket_recvall(net_socket_t* self, void* data, int len, int* recvd)
 
 int net_socket_error(net_socket_t* self)
 {
-	assert(self);
+	ASSERT(self);
 	return self->error;
 }
 
 int net_socket_connected(net_socket_t* self)
 {
-	assert(self);
+	ASSERT(self);
 	return self->connected;
 }

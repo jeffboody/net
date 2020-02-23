@@ -21,10 +21,11 @@
  *
  */
 
-#include "net/net_socket.h"
-#include "net/net_socket_wget.h"
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "net/net_socket.h"
+#include "net/net_socket_wget.h"
 
 int main(int argc, const char** argv)
 {
@@ -34,7 +35,8 @@ int main(int argc, const char** argv)
 		return EXIT_FAILURE;
 	}
 
-	net_socket_t* s = net_socket_listen(argv[1], NET_SOCKET_TCP, 1);
+	net_socket_t* s;
+	s = net_socket_listen(argv[1], NET_SOCKET_TCP, 1);
 	if(s == NULL)
 	{
 		return EXIT_FAILURE;

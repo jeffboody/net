@@ -7,22 +7,26 @@ OBJECTS  = $(TARGET).o $(CLASSES:%=%.o)
 HFILES   = $(CLASSES:%=%.h)
 OPT      = -O2 -Wall
 CFLAGS   = $(OPT) -I.
-LDFLAGS  = -Lnet -lnet -lssl -lcrypto
+LDFLAGS  = -Lnet -lnet -Llibcc -lcc -lssl -lcrypto
 CCC      = gcc
 
 all: $(TARGET)
 
-$(TARGET): $(OBJECTS) net
+$(TARGET): $(OBJECTS) libcc net
 	$(CCC) $(OPT) $(OBJECTS) -o $@ $(LDFLAGS)
 
-.PHONY: net
+.PHONY: libcc net
+
+libcc:
+	$(MAKE) -C libcc
 
 net:
 	$(MAKE) -C net
 
 clean:
 	rm -f $(OBJECTS) *~ \#*\# $(TARGET)
+	$(MAKE) -C libcc clean
 	$(MAKE) -C net clean
-	rm net
+	rm libcc net
 
 $(OBJECTS): $(HFILES)

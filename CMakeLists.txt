@@ -10,7 +10,6 @@ add_library(net
             # Source
             net_socket.c
             net_socket_wget.c
-            net_log.c
             http_stream.c)
 
 # Linking
