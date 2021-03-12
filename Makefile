@@ -1,8 +1,5 @@
 TARGET   = libnet.a
-CLASS    = net_socket net_socket_wget http_stream
-ifeq ($(NET_SOCKET_USE_SSL),1)
-	CLASS += net_socketSSL
-endif
+CLASS    = net_socket http_stream
 SOURCE   = $(CLASS:%=%.c)
 OBJECTS  = $(SOURCE:.c=.o)
 HFILES   = $(CLASS:%=%.h)
@@ -12,6 +9,7 @@ LDFLAGS  = -lm
 AR       = ar
 
 ifeq ($(NET_SOCKET_USE_SSL),1)
+	CFLAGS  += -DNET_SOCKET_USE_SSL
 	LDFLAGS += -lssl -lcrypto
 endif
 

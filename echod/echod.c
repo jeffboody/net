@@ -37,7 +37,8 @@ int main(int argc, const char** argv)
 		return EXIT_FAILURE;
 	}
 
-	net_socket_t* s = net_socket_listen(argv[1], NET_SOCKET_TCP, 1);
+	net_socket_t* s;
+	s = net_socket_listen(argv[1], NET_SOCKET_TYPE_TCP, 0, 1);
 	if(s == NULL)
 	{
 		return EXIT_FAILURE;

@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "net/net_socketSSL.h"
+#include "net/net_socket.h"
 
 int main(int argc, const char** argv)
 {
@@ -38,14 +38,15 @@ int main(int argc, const char** argv)
 		return EXIT_FAILURE;
 	}
 
-	net_socketSSL_t* s;
-	s = net_socketSSL_listen(argv[1], NET_SOCKETSSL_TCP, 1);
+	net_socket_t* s;
+	s = net_socket_listen(argv[1], NET_SOCKET_TYPE_TCP,
+	                      NET_SOCKET_FLAG_SSL, 1);
 	if(s == NULL)
 	{
 		return EXIT_FAILURE;
 	}
 
-	net_socketSSL_t* a = net_socketSSL_accept(s);
+	net_socket_t* a = net_socket_accept(s);
 	if(a == NULL)
 	{
 		goto fail_accept;
@@ -55,13 +56,13 @@ int main(int argc, const char** argv)
 	while(1)
 	{
 		int recvd;
-		net_socketSSL_recv(a, buf, 255, &recvd);
-		if(net_socketSSL_error(a))
+		net_socket_recv(a, buf, 255, &recvd);
+		if(net_socket_error(a))
 		{
 			// failed to recv
 			goto fail_echo;
 		}
-		else if(net_socketSSL_connected(a) == 0)
+		else if(net_socket_connected(a) == 0)
 		{
 			// normal shutdown
 			break;
@@ -72,24 +73,24 @@ int main(int argc, const char** argv)
 			printf("%s", buf);
 		}
 
-		net_socketSSL_sendall(a, buf, recvd);
-		if(net_socketSSL_error(a))
+		net_socket_sendall(a, buf, recvd);
+		if(net_socket_error(a))
 		{
 			// failed to send
 			goto fail_echo;
 		}
 	}
 
-	net_socketSSL_close(&a);
-	net_socketSSL_close(&s);
+	net_socket_close(&a);
+	net_socket_close(&s);
 
 	// success
 	return EXIT_SUCCESS;
 
 	// failure
 	fail_echo:
-		net_socketSSL_close(&a);
+		net_socket_close(&a);
 	fail_accept:
-		net_socketSSL_close(&s);
+		net_socket_close(&s);
 	return EXIT_FAILURE;
 }

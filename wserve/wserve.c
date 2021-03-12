@@ -25,7 +25,6 @@
 #include <stdlib.h>
 
 #include "net/net_socket.h"
-#include "net/net_socket_wget.h"
 
 int main(int argc, const char** argv)
 {
@@ -36,7 +35,7 @@ int main(int argc, const char** argv)
 	}
 
 	net_socket_t* s;
-	s = net_socket_listen(argv[1], NET_SOCKET_TCP, 1);
+	s = net_socket_listen(argv[1], NET_SOCKET_TYPE_TCP, 0, 1);
 	if(s == NULL)
 	{
 		return EXIT_FAILURE;

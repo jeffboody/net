@@ -29,7 +29,6 @@
 #include "libcc/cc_log.h"
 #include "libcc/cc_memory.h"
 #include "net/net_socket.h"
-#include "net/net_socket_wget.h"
 
 typedef struct
 {
@@ -190,7 +189,7 @@ int main(int argc, const char** argv)
 	// connect to addr
 	net_socket_t* sock;
 	sock = net_socket_connect(url.addr, url.port,
-	                          NET_SOCKET_TCP);
+	                          NET_SOCKET_TYPE_TCP, 0);
 	if(sock == NULL)
 	{
 		return EXIT_FAILURE;

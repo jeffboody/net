@@ -31,7 +31,7 @@
 
 #define LOG_TAG "echo"
 #include "libcc/cc_log.h"
-#include "net/net_socketSSL.h"
+#include "net/net_socket.h"
 
 int main(int argc, const char** argv)
 {
@@ -45,25 +45,26 @@ int main(int argc, const char** argv)
 	const char* addr = argv[1];
 	const char* port = argv[2];
 	const char* msg  = argv[3];
-	net_socketSSL_t* sock;
-	sock = net_socketSSL_connect(addr, port,
-	                             NET_SOCKETSSL_TCP);
+	net_socket_t* sock;
+	sock = net_socket_connect(addr, port,
+	                          NET_SOCKET_TYPE_TCP,
+	                          NET_SOCKET_FLAG_SSL);
 	if(sock == NULL)
 	{
 		return EXIT_FAILURE;
 	}
 
-	net_socketSSL_timeout(sock, 4, 4);
+	net_socket_timeout(sock, 4, 4);
 
 	int len = strlen(msg) + 1;
-	if(net_socketSSL_sendall(sock, msg, len) == 0)
+	if(net_socket_sendall(sock, msg, len) == 0)
 	{
 		goto fail_send;
 	}
 
 	char buf[256];
 	int recvd = 0;
-	if(net_socketSSL_recv(sock, buf, 256, &recvd) == 0)
+	if(net_socket_recv(sock, buf, 256, &recvd) == 0)
 	{
 		goto fail_recv;
 	}
@@ -72,7 +73,7 @@ int main(int argc, const char** argv)
 	LOGI("send=%s", msg);
 	LOGI("recv=%s", buf);
 
-	net_socketSSL_close(&sock);
+	net_socket_close(&sock);
 
 	// success
 	return EXIT_SUCCESS;
@@ -80,6 +81,6 @@ int main(int argc, const char** argv)
 	// failure
 	fail_recv:
 	fail_send:
-		net_socketSSL_close(&sock);
+		net_socket_close(&sock);
 	return EXIT_FAILURE;
 }

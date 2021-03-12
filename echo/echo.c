@@ -45,8 +45,9 @@ int main(int argc, const char** argv)
 	const char* addr = argv[1];
 	const char* port = argv[2];
 	const char* msg  = argv[3];
-	net_socket_t* sock = net_socket_connect(addr, port,
-	                                        NET_SOCKET_TCP);
+	net_socket_t* sock;
+	sock = net_socket_connect(addr, port,
+	                          NET_SOCKET_TYPE_TCP, 0);
 	if(sock == NULL)
 	{
 		return EXIT_FAILURE;

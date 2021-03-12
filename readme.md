@@ -31,6 +31,7 @@ SSL References
 	https://people.freebsd.org/~syrinx/presentations/openssl/OpenSSL-Programming-20140424-01.pdf
 	http://h30266.www3.hpe.com/odl/i64os/opsys/vmsos84/BA554_90007/ch04s03.html
 	https://aticleworld.com/ssl-server-client-using-openssl-in-c/
+	https://quuxplusone.github.io/blog/2020/01/26/openssl-part-3/
 
 License
 =======
