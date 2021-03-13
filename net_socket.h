@@ -30,6 +30,7 @@
 // Note that UDP is not supported for SSL.
 #define NET_SOCKET_TYPE_TCP 0
 #define NET_SOCKET_TYPE_UDP 1
+#define NET_SOCKET_TYPE_MAX 2
 
 // shutdown "how"
 #define NET_SOCKET_HOW_SHUT_RD   0
@@ -79,12 +80,30 @@ typedef struct
 	unsigned char* buffer;
 } net_socket_t;
 
-net_socket_t* net_socket_connect(const char* addr,
-                                 const char* port,
-                                 int type, int flags);
-net_socket_t* net_socket_listen(const char* port,
-                                int type, int flags,
-                                int backlog);
+typedef struct
+{
+	const char* addr;
+	const char* port;
+	const char* ca_cert;
+	const char* client_cert;
+	const char* client_key;
+	int         type;
+	int         flags;
+} net_connectInfo_t;
+
+typedef struct
+{
+	const char* port;
+	const char* ca_cert;
+	const char* server_cert;
+	const char* server_key;
+	int         type;
+	int         flags;
+	int         backlog;
+} net_listenInfo_t;
+
+net_socket_t* net_socket_connect(net_connectInfo_t* info);
+net_socket_t* net_socket_listen(net_listenInfo_t* info);
 net_socket_t* net_socket_accept(net_socket_t* self);
 int           net_socket_shutdown(net_socket_t* self,
                                   int how);

@@ -275,33 +275,68 @@ net_socket_connectTimeout(net_socket_t* self,
 ***********************************************************/
 
 net_socket_t*
-net_socket_connect(const char* addr, const char* port,
-                   int type, int flags)
+net_socket_connect(net_connectInfo_t* info)
 {
-	ASSERT(addr);
-	ASSERT(port);
+	ASSERT(info);
 
-	int socktype = SOCK_STREAM;
-	if(type == NET_SOCKET_TYPE_UDP)
+	// validate info
+	size_t size     = sizeof(net_socket_t);
+	int    socktype = SOCK_STREAM;
+	if((info->addr == NULL) ||
+	   (info->port == NULL) ||
+	   (info->type < 0)     ||
+	   (info->type >= NET_SOCKET_TYPE_MAX))
 	{
-		if(flags & NET_SOCKET_FLAG_SSL)
-		{
-			LOGE("invalid type=%i", type);
-			return NULL;
-		}
-
-		socktype = SOCK_DGRAM;
+		LOGE("invalid addr=%p, port=%p, type=%i",
+		     info->addr, info->port, info->type);
+		return NULL;
 	}
-
-	size_t size = sizeof(net_socket_t);
-	if(flags & NET_SOCKET_FLAG_SSL)
+	else if(info->flags & NET_SOCKET_FLAG_SSL)
 	{
+		// SSL must be enabled at compile time
 		#ifdef NET_SOCKET_USE_SSL
 			size = sizeof(net_socketSSL_t);
+
+			if(info->type == NET_SOCKET_TYPE_UDP)
+			{
+				LOGE("invalid type=%i", info->type);
+				return NULL;
+			}
+
+			if(info->flags & NET_SOCKET_FLAG_SSL_LISTEN_ANYONE)
+			{
+				LOGE("invalid flags=0x%X", info->flags);
+				return NULL;
+			}
+
+			if((info->ca_cert == NULL) &&
+			   (info->flags & NET_SOCKET_FLAG_SSL_CONNECT_INSECURE) == 0)
+			{
+				LOGE("invalid ca_cert=%p, flags=0x%X",
+				     info->ca_cert, info->flags);
+				return NULL;
+			}
 		#else
-			LOGE("invalid flags=0x%X", flags);
+			LOGE("invalid flags=0x%X", info->flags);
 			return NULL;
 		#endif
+	}
+	else
+	{
+		if(info->type == NET_SOCKET_TYPE_UDP)
+		{
+			socktype = SOCK_DGRAM;
+		}
+
+		// SSL parameters requires SSL flag
+		if((info->flags & NET_SOCKET_FLAG_SSL_CONNECT_INSECURE) ||
+		   (info->flags & NET_SOCKET_FLAG_SSL_LISTEN_ANYONE)    ||
+		   info->ca_cert || info->client_cert || info->client_key)
+		{
+			LOGE("invalid flags=0x%X, ca_cert=%p, client_cert=%p, client_key=%p",
+			     info->flags, info->ca_cert, info->client_cert,
+			     info->client_key);
+		}
 	}
 
 	net_socket_t* self;
@@ -312,15 +347,15 @@ net_socket_connect(const char* addr, const char* port,
 		return NULL;
 	}
 
-	self->type      = type;
-	self->flags     = flags;
+	self->type      = info->type;
+	self->flags     = info->flags;
 	self->connected = 1;
 
 	// SIGPIPE causes the process to exit for broken streams
 	// but we want to receive EPIPE instead
 	signal(SIGPIPE, SIG_IGN);
 
-	if(flags & NET_SOCKET_FLAG_TCP_BUFFERED)
+	if(info->flags & NET_SOCKET_FLAG_TCP_BUFFERED)
 	{
 		self->buffer = (unsigned char*)
 		               CALLOC(NET_SOCKET_BUFSIZE,
@@ -333,10 +368,10 @@ net_socket_connect(const char* addr, const char* port,
 	}
 
 	// for HTTP
-	snprintf(self->host, 256, "%s:%s", addr, port);
+	snprintf(self->host, 256, "%s:%s", info->addr, info->port);
 
 	#ifdef NET_SOCKET_USE_SSL
-	if(self->flags & NET_SOCKET_FLAG_SSL)
+	if(info->flags & NET_SOCKET_FLAG_SSL)
 	{
 		net_socketSSL_t* self_ssl = (net_socketSSL_t*) self;
 
@@ -349,43 +384,46 @@ net_socket_connect(const char* addr, const char* port,
 		}
 		self_ssl->method = NET_SOCKETSSL_METHOD_CLIENT;
 
-		if(SSL_CTX_load_verify_locations(self_ssl->ctx,
-		                                 "ca_cert.pem", NULL) != 1)
+		if(info->ca_cert)
 		{
-			LOGE("SSL_CTX_load_verify_locations failed");
-			goto fail_load_verify;
+			if(SSL_CTX_load_verify_locations(self_ssl->ctx,
+			                                 info->ca_cert, NULL) != 1)
+			{
+				LOGE("SSL_CTX_load_verify_locations failed");
+				goto fail_load_verify;
+			}
 		}
 
-		if(SSL_CTX_set_default_verify_file(self_ssl->ctx) != 1)
+		if(info->client_cert)
 		{
-			LOGE("SSL_CTX_set_default_verify_file failed");
-			goto fail_set_default_verify_file;
+			if(SSL_CTX_use_certificate_file(self_ssl->ctx,
+			                                info->client_cert,
+			                                SSL_FILETYPE_PEM) != 1)
+			{
+				LOGE("SSL_CTX_use_certificate_file failed");
+				goto fail_use_cert;
+			}
 		}
 
-		if(SSL_CTX_use_certificate_file(self_ssl->ctx,
-		                                "client_cert.pem",
-		                                SSL_FILETYPE_PEM) != 1)
+		if(info->client_key)
 		{
-			LOGE("SSL_CTX_use_certificate_file failed");
-			goto fail_use_cert;
-		}
+			if(SSL_CTX_use_PrivateKey_file(self_ssl->ctx,
+			                               info->client_key,
+			                               SSL_FILETYPE_PEM) != 1)
+			{
+				LOGE("SSL_CTX_use_PrivateKey_file failed");
+				goto fail_use_priv;
+			}
 
-		if(SSL_CTX_use_PrivateKey_file(self_ssl->ctx,
-		                               "client_key.pem",
-		                               SSL_FILETYPE_PEM) != 1)
-		{
-			LOGE("SSL_CTX_use_PrivateKey_file failed");
-			goto fail_use_priv;
-		}
-
-		if(SSL_CTX_check_private_key(self_ssl->ctx) != 1)
-		{
-			LOGE("SSL_CTX_check_private_key failed");
-			goto fail_check_priv;
+			if(SSL_CTX_check_private_key(self_ssl->ctx) != 1)
+			{
+				LOGE("SSL_CTX_check_private_key failed");
+				goto fail_check_priv;
+			}
 		}
 
 		SSL_CTX_set_mode(self_ssl->ctx, SSL_MODE_AUTO_RETRY);
-		if(self->flags & NET_SOCKET_FLAG_SSL_CONNECT_INSECURE)
+		if(info->flags & NET_SOCKET_FLAG_SSL_CONNECT_INSECURE)
 		{
 			SSL_CTX_set_verify(self_ssl->ctx,
 			                   SSL_VERIFY_NONE, NULL);
@@ -404,15 +442,15 @@ net_socket_connect(const char* addr, const char* port,
 	hints.ai_family   = AF_UNSPEC;
 	hints.ai_socktype = socktype;
 
-	struct addrinfo* info;
-	if(getaddrinfo(addr, port, &hints, &info) != 0)
+	struct addrinfo* ainfo;
+	if(getaddrinfo(info->addr, info->port, &hints, &ainfo) != 0)
 	{
 		LOGD("getaddrinfo addr=%s, port=%s, failed",
-		     addr, port);
+		     info->addr, info->port);
 		goto fail_getaddrinfo;
 	}
 
-	struct addrinfo* i = info;
+	struct addrinfo* i = ainfo;
 	self->sockfd = -1;
 	while(i)
 	{
@@ -425,8 +463,8 @@ net_socket_connect(const char* addr, const char* port,
 			continue;
 		}
 
-		if((flags & NET_SOCKET_FLAG_TCP_NODELAY) ||
-		   (flags & NET_SOCKET_FLAG_TCP_BUFFERED))
+		if((info->flags & NET_SOCKET_FLAG_TCP_NODELAY) ||
+		   (info->flags & NET_SOCKET_FLAG_TCP_BUFFERED))
 		{
 			int yes = 1;
 			if(setsockopt(self->sockfd, IPPROTO_TCP, TCP_NODELAY,
@@ -446,7 +484,7 @@ net_socket_connect(const char* addr, const char* port,
 
 		break;
 	}
-	freeaddrinfo(info);
+	freeaddrinfo(ainfo);
 
 	if(self->sockfd == -1)
 	{
@@ -464,10 +502,9 @@ net_socket_connect(const char* addr, const char* port,
 	fail_check_priv:
 	fail_use_priv:
 	fail_use_cert:
-	fail_set_default_verify_file:
 	fail_load_verify:
 	{
-		if(self->flags & NET_SOCKET_FLAG_SSL)
+		if(info->flags & NET_SOCKET_FLAG_SSL)
 		{
 			net_socketSSL_t* self_ssl = (net_socketSSL_t*) self;
 			SSL_CTX_free(self_ssl->ctx);
@@ -482,33 +519,70 @@ net_socket_connect(const char* addr, const char* port,
 }
 
 net_socket_t*
-net_socket_listen(const char* port, int type, int flags,
-                  int backlog)
+net_socket_listen(net_listenInfo_t* info)
 {
-	ASSERT(port);
-	ASSERT(backlog > 0);
+	ASSERT(info);
 
-	int socktype = SOCK_STREAM;
-	if(type == NET_SOCKET_TYPE_UDP)
+	// validate info
+	size_t size     = sizeof(net_socket_t);
+	int    socktype = SOCK_STREAM;
+	if((info->port == NULL) ||
+	   (info->type < 0)     ||
+	   (info->type >= NET_SOCKET_TYPE_MAX) ||
+	   (info->backlog < 0))
 	{
-		if(flags & NET_SOCKET_FLAG_SSL)
-		{
-			LOGE("invalid type=%i", type);
-			return NULL;
-		}
-
-		socktype = SOCK_DGRAM;
+		LOGE("invalid port=%p, type=%i, backlog=%i",
+		     info->port, info->type, info->backlog);
+		return NULL;
 	}
-
-	size_t size = sizeof(net_socket_t);
-	if(flags & NET_SOCKET_FLAG_SSL)
+	else if(info->flags & NET_SOCKET_FLAG_SSL)
 	{
+		// SSL must be enabled at compile time
 		#ifdef NET_SOCKET_USE_SSL
 			size = sizeof(net_socketSSL_t);
+
+			if(info->type == NET_SOCKET_TYPE_UDP)
+			{
+				LOGE("invalid type=%i", info->type);
+				return NULL;
+			}
+
+			if(info->flags & NET_SOCKET_FLAG_SSL_CONNECT_INSECURE)
+			{
+				LOGE("invalid flags=0x%X", info->flags);
+				return NULL;
+			}
+
+			if((info->ca_cert     == NULL) ||
+			   (info->server_cert == NULL) ||
+			   (info->server_key  == NULL))
+			{
+				LOGE("invalid ca_cert=%p, server_cert=%p, server_key=%p",
+				     info->ca_cert, info->server_cert,
+				     info->server_key);
+				return NULL;
+			}
 		#else
-			LOGE("invalid flags=0x%X", flags);
+			LOGE("invalid flags=0x%X", info->flags);
 			return NULL;
 		#endif
+	}
+	else
+	{
+		if(info->type == NET_SOCKET_TYPE_UDP)
+		{
+			socktype = SOCK_DGRAM;
+		}
+
+		// SSL parameters requires SSL flag
+		if((info->flags & NET_SOCKET_FLAG_SSL_CONNECT_INSECURE) ||
+		   (info->flags & NET_SOCKET_FLAG_SSL_LISTEN_ANYONE)    ||
+		   info->ca_cert || info->server_cert || info->server_key)
+		{
+			LOGE("invalid flags=0x%X, ca_cert=%p, server_cert=%p, server_key=%p",
+			     info->flags, info->ca_cert, info->server_cert,
+			     info->server_key);
+		}
 	}
 
 	net_socket_t* self;
@@ -519,8 +593,8 @@ net_socket_listen(const char* port, int type, int flags,
 		return NULL;
 	}
 
-	self->type      = type;
-	self->flags     = flags;
+	self->type      = info->type;
+	self->flags     = info->flags;
 	self->connected = 1;
 
 	// SIGPIPE causes the process to exit for broken streams
@@ -528,7 +602,7 @@ net_socket_listen(const char* port, int type, int flags,
 	signal(SIGPIPE, SIG_IGN);
 
 	#ifdef NET_SOCKET_USE_SSL
-	if(flags & NET_SOCKET_FLAG_SSL)
+	if(info->flags & NET_SOCKET_FLAG_SSL)
 	{
 		net_socketSSL_t* self_ssl = (net_socketSSL_t*) self;
 
@@ -543,21 +617,15 @@ net_socket_listen(const char* port, int type, int flags,
 		self_ssl->ssl    = NULL;
 
 		if(SSL_CTX_load_verify_locations(self_ssl->ctx,
-		                                 "ca_cert.pem",
+		                                 info->ca_cert,
 		                                 NULL) != 1)
 		{
 			LOGE("SSL_CTX_load_verify_locations failed");
 			goto fail_load_verify;
 		}
 
-		if(SSL_CTX_set_default_verify_file(self_ssl->ctx) != 1)
-		{
-			LOGE("SSL_CTX_set_default_verify_file failed");
-			goto fail_set_default_verify_file;
-		}
-
 		STACK_OF(X509_NAME)* cert_names;
-		cert_names = SSL_load_client_CA_file("ca_cert.pem");
+		cert_names = SSL_load_client_CA_file(info->ca_cert);
 		if(cert_names == NULL)
 		{
 			LOGE("SSL_load_client_CA_file failed");
@@ -566,7 +634,7 @@ net_socket_listen(const char* port, int type, int flags,
 		SSL_CTX_set_client_CA_list(self_ssl->ctx, cert_names);
 
 		if(SSL_CTX_use_certificate_file(self_ssl->ctx,
-		                                "server_cert.pem",
+		                                info->server_cert,
 		                                SSL_FILETYPE_PEM) != 1)
 		{
 			LOGE("SSL_CTX_use_certificate_file failed");
@@ -574,7 +642,7 @@ net_socket_listen(const char* port, int type, int flags,
 		}
 
 		if(SSL_CTX_use_PrivateKey_file(self_ssl->ctx,
-		                               "server_key.pem",
+		                               info->server_key,
 		                               SSL_FILETYPE_PEM) != 1)
 		{
 			LOGE("SSL_CTX_use_PrivateKey_file failed");
@@ -610,14 +678,14 @@ net_socket_listen(const char* port, int type, int flags,
 	hints.ai_socktype = socktype;
 	hints.ai_flags    = AI_PASSIVE;
 
-	struct addrinfo* info;
-	if(getaddrinfo(NULL, port, &hints, &info) != 0)
+	struct addrinfo* ainfo;
+	if(getaddrinfo(NULL, info->port, &hints, &ainfo) != 0)
 	{
 		LOGD("getaddrinfo failed");
 		goto fail_getaddrinfo;
 	}
 
-	struct addrinfo* i = info;
+	struct addrinfo* i = ainfo;
 	self->sockfd = -1;
 	while(i)
 	{
@@ -649,7 +717,7 @@ net_socket_listen(const char* port, int type, int flags,
 
 		break;
 	}
-	freeaddrinfo(info);
+	freeaddrinfo(ainfo);
 
 	if(self->sockfd == -1)
 	{
@@ -657,7 +725,7 @@ net_socket_listen(const char* port, int type, int flags,
 		goto fail_socket;
 	}
 
-	if(listen(self->sockfd, backlog) == -1)
+	if(listen(self->sockfd, info->backlog) == -1)
 	{
 		LOGD("listen failed");
 		goto fail_listen;
@@ -676,11 +744,10 @@ net_socket_listen(const char* port, int type, int flags,
 	fail_use_priv:
 	fail_use_cert:
 	fail_cert_names:
-	fail_set_default_verify_file:
 	fail_load_verify:
 	{
 		net_socketSSL_t* self_ssl = (net_socketSSL_t*) self;
-		if(flags & NET_SOCKET_FLAG_SSL)
+		if(info->flags & NET_SOCKET_FLAG_SSL)
 		{
 			SSL_CTX_free(self_ssl->ctx);
 		}

@@ -34,9 +34,19 @@ int main(int argc, const char** argv)
 		return EXIT_FAILURE;
 	}
 
+	net_listenInfo_t info =
+	{
+		.port        = argv[1],
+		.ca_cert     = "ca_cert.pem",
+		.server_cert = "server_cert.pem",
+		.server_key  = "server_key.pem",
+		.type        = NET_SOCKET_TYPE_TCP,
+		.flags       = NET_SOCKET_FLAG_SSL,
+		.backlog     = 1
+	};
+
 	net_socket_t* s;
-	s = net_socket_listen(argv[1], NET_SOCKET_TYPE_TCP,
-	                      NET_SOCKET_FLAG_SSL, 1);
+	s = net_socket_listen(&info);
 	if(s == NULL)
 	{
 		return EXIT_FAILURE;

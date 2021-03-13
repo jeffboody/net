@@ -34,8 +34,16 @@ int main(int argc, const char** argv)
 		return EXIT_FAILURE;
 	}
 
+	net_listenInfo_t info =
+	{
+		.port    = argv[1],
+		.type    = NET_SOCKET_TYPE_TCP,
+		.flags   = 0,
+		.backlog = 1
+	};
+
 	net_socket_t* s;
-	s = net_socket_listen(argv[1], NET_SOCKET_TYPE_TCP, 0, 1);
+	s = net_socket_listen(&info);
 	if(s == NULL)
 	{
 		return EXIT_FAILURE;

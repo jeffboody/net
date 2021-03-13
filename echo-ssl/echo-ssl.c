@@ -41,14 +41,20 @@ int main(int argc, const char** argv)
 		return EXIT_FAILURE;
 	}
 
+	net_connectInfo_t info =
+	{
+		.addr        = argv[1],
+		.port        = argv[2],
+		.ca_cert     = "ca_cert.pem",
+		.client_cert = "client_cert.pem",
+		.client_key  = "client_key.pem",
+		.type        = NET_SOCKET_TYPE_TCP,
+		.flags       = NET_SOCKET_FLAG_SSL
+	};
+
 	// connect to addr
-	const char* addr = argv[1];
-	const char* port = argv[2];
-	const char* msg  = argv[3];
 	net_socket_t* sock;
-	sock = net_socket_connect(addr, port,
-	                          NET_SOCKET_TYPE_TCP,
-	                          NET_SOCKET_FLAG_SSL);
+	sock = net_socket_connect(&info);
 	if(sock == NULL)
 	{
 		return EXIT_FAILURE;
@@ -56,6 +62,7 @@ int main(int argc, const char** argv)
 
 	net_socket_timeout(sock, 4, 4);
 
+	const char* msg  = argv[3];
 	int len = strlen(msg) + 1;
 	if(net_socket_sendall(sock, msg, len) == 0)
 	{

@@ -186,10 +186,17 @@ int main(int argc, const char** argv)
 		return EXIT_FAILURE;
 	}
 
+	net_connectInfo_t info =
+	{
+		.addr  = url.addr,
+		.port  = url.port,
+		.type  = NET_SOCKET_TYPE_TCP,
+		.flags = 0
+	};
+
 	// connect to addr
 	net_socket_t* sock;
-	sock = net_socket_connect(url.addr, url.port,
-	                          NET_SOCKET_TYPE_TCP, 0);
+	sock = net_socket_connect(&info);
 	if(sock == NULL)
 	{
 		return EXIT_FAILURE;
