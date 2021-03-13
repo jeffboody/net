@@ -385,7 +385,16 @@ net_socket_connect(const char* addr, const char* port,
 		}
 
 		SSL_CTX_set_mode(self_ssl->ctx, SSL_MODE_AUTO_RETRY);
-		SSL_CTX_set_verify(self_ssl->ctx, SSL_VERIFY_PEER, NULL);
+		if(self->flags & NET_SOCKET_FLAG_SSL_CONNECT_INSECURE)
+		{
+			SSL_CTX_set_verify(self_ssl->ctx,
+			                   SSL_VERIFY_NONE, NULL);
+		}
+		else
+		{
+			SSL_CTX_set_verify(self_ssl->ctx,
+			                   SSL_VERIFY_PEER, NULL);
+		}
 		SSL_CTX_set_verify_depth(self_ssl->ctx, 1);
 	}
 	#endif
@@ -533,7 +542,8 @@ net_socket_listen(const char* port, int type, int flags,
 		self_ssl->method = NET_SOCKETSSL_METHOD_SERVER;
 		self_ssl->ssl    = NULL;
 
-		if(SSL_CTX_load_verify_locations(self_ssl->ctx, "ca_cert.pem",
+		if(SSL_CTX_load_verify_locations(self_ssl->ctx,
+		                                 "ca_cert.pem",
 		                                 NULL) != 1)
 		{
 			LOGE("SSL_CTX_load_verify_locations failed");
@@ -578,10 +588,18 @@ net_socket_listen(const char* port, int type, int flags,
 		}
 
 		SSL_CTX_set_mode(self_ssl->ctx, SSL_MODE_AUTO_RETRY);
-		SSL_CTX_set_verify(self_ssl->ctx,
-		                   SSL_VERIFY_PEER |
-		                   SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-		                   NULL);
+		if(self->flags & NET_SOCKET_FLAG_SSL_LISTEN_ANYONE)
+		{
+			SSL_CTX_set_verify(self_ssl->ctx,
+			                   SSL_VERIFY_NONE, NULL);
+		}
+		else
+		{
+			SSL_CTX_set_verify(self_ssl->ctx,
+			                   SSL_VERIFY_PEER |
+			                   SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+			                   NULL);
+		}
 		SSL_CTX_set_verify_depth(self_ssl->ctx, 1);
 	}
 	#endif
@@ -767,10 +785,13 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 			goto fail_ssl_accept;
 		}
 
-		if(SSL_get_verify_result(remote_ssl->ssl) != X509_V_OK)
+		if((remote->flags & NET_SOCKET_FLAG_SSL_LISTEN_ANYONE) == 0)
 		{
-			LOGE("SSL_get_verify_result failed");
-			goto fail_ssl_verify;
+			if(SSL_get_verify_result(remote_ssl->ssl) != X509_V_OK)
+			{
+				LOGE("SSL_get_verify_result failed");
+				goto fail_ssl_verify;
+			}
 		}
 	}
 	#endif

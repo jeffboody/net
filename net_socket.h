@@ -47,9 +47,16 @@
 // with the SSL flag is SSL_VERIFY_PEER on the client and
 // SSL_VERIFY_PEER/SSL_VERIFY_FAIL_IF_NO_PEER_CERT on the
 // server.
-#define NET_SOCKET_FLAG_TCP_NODELAY  0x0001
-#define NET_SOCKET_FLAG_TCP_BUFFERED 0x0002
-#define NET_SOCKET_FLAG_SSL          0x1000
+// The CONNECT_INSECURE flag is equivalent to the CURL
+// option --insecure or wget option --no-check-certificate
+// and is insecure as the name implies.
+// The LISTEN_ANYONE flag may be used for servers which do
+// not need to verify their client such as an https server.
+#define NET_SOCKET_FLAG_TCP_NODELAY          0x0001
+#define NET_SOCKET_FLAG_TCP_BUFFERED         0x0002
+#define NET_SOCKET_FLAG_SSL                  0x1000
+#define NET_SOCKET_FLAG_SSL_CONNECT_INSECURE 0x2000
+#define NET_SOCKET_FLAG_SSL_LISTEN_ANYONE    0x4000
 
 typedef int (*net_socket_requestFn)(void* priv,
                                     const char* request,
