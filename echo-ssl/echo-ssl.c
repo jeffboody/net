@@ -57,6 +57,7 @@ int main(int argc, const char** argv)
 	sock = net_socket_connect(&info);
 	if(sock == NULL)
 	{
+		LOGE("net_socket_connect failed");
 		return EXIT_FAILURE;
 	}
 
