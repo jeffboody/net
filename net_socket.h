@@ -99,7 +99,6 @@ typedef struct
 	const char* server_key;
 	int         type;
 	int         flags;
-	int         backlog;
 } net_listenInfo_t;
 
 net_socket_t* net_socket_connect(net_connectInfo_t* info);

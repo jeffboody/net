@@ -528,11 +528,10 @@ net_socket_listen(net_listenInfo_t* info)
 	int    socktype = SOCK_STREAM;
 	if((info->port == NULL) ||
 	   (info->type < 0)     ||
-	   (info->type >= NET_SOCKET_TYPE_MAX) ||
-	   (info->backlog < 0))
+	   (info->type >= NET_SOCKET_TYPE_MAX))
 	{
-		LOGE("invalid port=%p, type=%i, backlog=%i",
-		     info->port, info->type, info->backlog);
+		LOGE("invalid port=%p, type=%i",
+		     info->port, info->type);
 		return NULL;
 	}
 	else if(info->flags & NET_SOCKET_FLAG_SSL)
@@ -725,7 +724,7 @@ net_socket_listen(net_listenInfo_t* info)
 		goto fail_socket;
 	}
 
-	if(listen(self->sockfd, info->backlog) == -1)
+	if(listen(self->sockfd, SOMAXCONN) == -1)
 	{
 		LOGD("listen failed");
 		goto fail_listen;

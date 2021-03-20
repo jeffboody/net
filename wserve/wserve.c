@@ -36,10 +36,9 @@ int main(int argc, const char** argv)
 
 	net_listenInfo_t info =
 	{
-		.port    = argv[1],
-		.type    = NET_SOCKET_TYPE_TCP,
-		.flags   = 0,
-		.backlog = 1
+		.port  = argv[1],
+		.type  = NET_SOCKET_TYPE_TCP,
+		.flags = 0
 	};
 
 	net_socket_t* s;

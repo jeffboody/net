@@ -45,8 +45,7 @@ int main(int argc, const char** argv)
 		.server_cert = "server_cert.pem",
 		.server_key  = "server_key.pem",
 		.type        = NET_SOCKET_TYPE_TCP,
-		.flags       = NET_SOCKET_FLAG_SSL,
-		.backlog     = 1
+		.flags       = NET_SOCKET_FLAG_SSL
 	};
 
 	net_socket_t* s;
