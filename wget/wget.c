@@ -204,12 +204,13 @@ int main(int argc, const char** argv)
 	}
 
 	// wget data
-	int   size = 0;
-	char* data = NULL;
+	int   status = 0;
+	int   size   = 0;
+	char* data   = NULL;
 	if(net_socket_wget(sock, "wget/1.0", url.request, 1,
-	                   &size, (void**) &data) == 0)
+	                   &status, &size, (void**) &data) == 0)
 	{
-		LOGE("net_socket_wget failed");
+		LOGE("net_socket_wget: status=%i", status);
 		net_socket_close(&sock);
 		return EXIT_FAILURE;
 	}

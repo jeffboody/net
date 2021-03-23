@@ -1169,13 +1169,18 @@ int net_socket_connected(net_socket_t* self)
 int net_socket_wget(net_socket_t* self,
                     const char* user_agent,
                     const char* request, int close,
-                    int* _size, void** _data)
+                    int* _status, int* _size,
+                    void** _data)
 {
 	ASSERT(self);
 	ASSERT(user_agent);
 	ASSERT(request);
+	ASSERT(_status);
 	ASSERT(_size);
 	ASSERT(_data);
+
+	// initialize status
+	*_status = 0;
 
 	// prepare the request
 	const int REQ_SIZE = 4*256;
@@ -1218,6 +1223,8 @@ int net_socket_wget(net_socket_t* self,
 	http_response_init(&response);
 	if(http_stream_readResponse(&stream, &response) == 0)
 	{
+		*_status = response.status;
+
 		// don't set the error flag if not found
 		// TODO - redesign sockets to handle status codes better
 		if(response.status != HTTP_NOT_FOUND)
@@ -1225,6 +1232,10 @@ int net_socket_wget(net_socket_t* self,
 			self->error = 1;
 		}
 		return 0;
+	}
+	else
+	{
+		*_status = response.status;
 	}
 
 	// read data

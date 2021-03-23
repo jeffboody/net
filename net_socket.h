@@ -131,7 +131,7 @@ int           net_socket_connected(net_socket_t* self);
 int           net_socket_wget(net_socket_t* self,
                               const char* user_agent,
                               const char* request,
-                              int close,
+                              int close, int* _status,
                               int* _size, void** _data);
 int           net_socket_wserve(net_socket_t* self, int chunked,
                                 void* request_priv,
