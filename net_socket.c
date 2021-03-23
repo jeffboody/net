@@ -218,19 +218,19 @@ net_socket_connectTimeout(net_socket_t* self,
 		self_ssl->ssl = SSL_new(self_ssl->ctx);
 		if(self_ssl->ssl == NULL)
 		{
-			LOGE("SSL_new failed");
+			LOGD("SSL_new failed");
 			goto fail_ssl;
 		}
 
 		if(SSL_set_fd(self_ssl->ssl, self->sockfd) != 1)
 		{
-			LOGE("SSL_set_fd failed");
+			LOGD("SSL_set_fd failed");
 			goto fail_set_fd;
 		}
 
 		if(SSL_connect(self_ssl->ssl) != 1)
 		{
-			LOGE("SSL_connect failed");
+			LOGD("SSL_connect failed");
 			goto fail_ssl_connect;
 		}
 
@@ -238,7 +238,7 @@ net_socket_connectTimeout(net_socket_t* self,
 		{
 			if(SSL_get_verify_result(self_ssl->ssl) != X509_V_OK)
 			{
-				LOGE("SSL_get_verify_result failed");
+				LOGD("SSL_get_verify_result failed");
 				goto fail_ssl_verify;
 			}
 		}
@@ -379,7 +379,7 @@ net_socket_connect(net_connectInfo_t* info)
 		self_ssl->ctx = SSL_CTX_new(TLS_client_method());
 		if(self_ssl->ctx == NULL)
 		{
-			LOGE("SSL_CTX_new failed");
+			LOGD("SSL_CTX_new failed");
 			goto fail_ctx;
 		}
 		self_ssl->method = NET_SOCKETSSL_METHOD_CLIENT;
@@ -389,7 +389,7 @@ net_socket_connect(net_connectInfo_t* info)
 			if(SSL_CTX_load_verify_locations(self_ssl->ctx,
 			                                 info->ca_cert, NULL) != 1)
 			{
-				LOGE("SSL_CTX_load_verify_locations failed");
+				LOGD("SSL_CTX_load_verify_locations failed");
 				goto fail_load_verify;
 			}
 		}
@@ -400,7 +400,7 @@ net_socket_connect(net_connectInfo_t* info)
 			                                info->client_cert,
 			                                SSL_FILETYPE_PEM) != 1)
 			{
-				LOGE("SSL_CTX_use_certificate_file failed");
+				LOGD("SSL_CTX_use_certificate_file failed");
 				goto fail_use_cert;
 			}
 		}
@@ -411,13 +411,13 @@ net_socket_connect(net_connectInfo_t* info)
 			                               info->client_key,
 			                               SSL_FILETYPE_PEM) != 1)
 			{
-				LOGE("SSL_CTX_use_PrivateKey_file failed");
+				LOGD("SSL_CTX_use_PrivateKey_file failed");
 				goto fail_use_priv;
 			}
 
 			if(SSL_CTX_check_private_key(self_ssl->ctx) != 1)
 			{
-				LOGE("SSL_CTX_check_private_key failed");
+				LOGD("SSL_CTX_check_private_key failed");
 				goto fail_check_priv;
 			}
 		}
@@ -609,7 +609,7 @@ net_socket_listen(net_listenInfo_t* info)
 		self_ssl->ctx = SSL_CTX_new(TLS_server_method());
 		if(self_ssl->ctx == NULL)
 		{
-			LOGE("SSL_CTX_new failed");
+			LOGD("SSL_CTX_new failed");
 			goto fail_ctx;
 		}
 		self_ssl->method = NET_SOCKETSSL_METHOD_SERVER;
@@ -619,7 +619,7 @@ net_socket_listen(net_listenInfo_t* info)
 		                                 info->ca_cert,
 		                                 NULL) != 1)
 		{
-			LOGE("SSL_CTX_load_verify_locations failed");
+			LOGD("SSL_CTX_load_verify_locations failed");
 			goto fail_load_verify;
 		}
 
@@ -627,7 +627,7 @@ net_socket_listen(net_listenInfo_t* info)
 		cert_names = SSL_load_client_CA_file(info->ca_cert);
 		if(cert_names == NULL)
 		{
-			LOGE("SSL_load_client_CA_file failed");
+			LOGD("SSL_load_client_CA_file failed");
 			goto fail_cert_names;
 		}
 		SSL_CTX_set_client_CA_list(self_ssl->ctx, cert_names);
@@ -636,7 +636,7 @@ net_socket_listen(net_listenInfo_t* info)
 		                                info->server_cert,
 		                                SSL_FILETYPE_PEM) != 1)
 		{
-			LOGE("SSL_CTX_use_certificate_file failed");
+			LOGD("SSL_CTX_use_certificate_file failed");
 			goto fail_use_cert;
 		}
 
@@ -644,13 +644,13 @@ net_socket_listen(net_listenInfo_t* info)
 		                               info->server_key,
 		                               SSL_FILETYPE_PEM) != 1)
 		{
-			LOGE("SSL_CTX_use_PrivateKey_file failed");
+			LOGD("SSL_CTX_use_PrivateKey_file failed");
 			goto fail_use_priv;
 		}
 
 		if(SSL_CTX_check_private_key(self_ssl->ctx) != 1)
 		{
-			LOGE("SSL_CTX_check_private_key failed");
+			LOGD("SSL_CTX_check_private_key failed");
 			goto fail_check_priv;
 		}
 
@@ -832,20 +832,20 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 		remote_ssl->ssl = SSL_new(remote_ssl->ctx);
 		if(remote_ssl->ssl == NULL)
 		{
-			LOGE("SSL_new failed");
+			LOGD("SSL_new failed");
 			goto fail_ssl;
 		}
 
 		if(SSL_set_fd(remote_ssl->ssl, sockfd) != 1)
 		{
-			LOGE("SSL_set_fd failed");
+			LOGD("SSL_set_fd failed");
 			goto fail_set_fd;
 		}
 
 		int ret = SSL_accept(remote_ssl->ssl);
 		if(ret != 1)
 		{
-			LOGE("SSL_accept failed %i",
+			LOGD("SSL_accept failed %i",
 			     SSL_get_error(remote_ssl->ssl, ret));
 			ERR_print_errors_fp(stderr);
 			goto fail_ssl_accept;
@@ -855,7 +855,7 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 		{
 			if(SSL_get_verify_result(remote_ssl->ssl) != X509_V_OK)
 			{
-				LOGE("SSL_get_verify_result failed");
+				LOGD("SSL_get_verify_result failed");
 				goto fail_ssl_verify;
 			}
 		}
