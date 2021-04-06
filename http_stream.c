@@ -234,6 +234,10 @@ int http_stream_readResponse(http_stream_t* self,
 			{
 				return 1;
 			}
+			else if(response->status == HTTP_NO_CONTENT)
+			{
+				return 1;
+			}
 			else
 			{
 				LOGD("invalid status=%i, content_length=%i, chunked=%i",

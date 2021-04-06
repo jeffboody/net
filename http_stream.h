@@ -23,10 +23,11 @@
 
 #include "net_socket.h"
 
-#define HTTP_CONTINUE  100
-#define HTTP_OK        200
-#define HTTP_NOT_FOUND 404
-#define HTTP_BUF_SIZE  4096
+#define HTTP_CONTINUE   100
+#define HTTP_OK         200
+#define HTTP_NO_CONTENT 204
+#define HTTP_NOT_FOUND  404
+#define HTTP_BUF_SIZE   4096
 
 #define HTTP_METHOD_NONE 0
 #define HTTP_METHOD_GET  1

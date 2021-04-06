@@ -1179,8 +1179,9 @@ int net_socket_wget(net_socket_t* self,
 	ASSERT(_size);
 	ASSERT(_data);
 
-	// initialize status
+	// initialize state
 	*_status = 0;
+	*_size   = 0;
 
 	// prepare the request
 	const int REQ_SIZE = 4*256;
@@ -1247,7 +1248,7 @@ int net_socket_wget(net_socket_t* self,
 			goto fail_data;
 		}
 	}
-	else
+	else if(response.content_length)
 	{
 		int   size = response.content_length;
 		char* data = (char*) REALLOC(*_data, size*sizeof(char));
@@ -1325,7 +1326,12 @@ int net_socket_wserve(net_socket_t* self, int chunked,
 		goto fail_data;
 	}
 
-	if(http_stream_writeData(&stream, size, (void*) data) == 0)
+	if(size == 0)
+	{
+		http_stream_writeError(&stream, HTTP_NO_CONTENT,
+		                       "No content");
+	}
+	else if(http_stream_writeData(&stream, size, (void*) data) == 0)
 	{
 		// don't call writeError
 		self->error = 1;
