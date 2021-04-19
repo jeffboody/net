@@ -1365,6 +1365,9 @@ int net_socket_requestFile(void* priv, const char* request,
 	ASSERT(_size);
 	ASSERT(_data);
 
+	*_data = NULL;
+	*_size = 0;
+
 	// remove the leading '/'
 	const char* fname = &(request[1]);
 
@@ -1379,15 +1382,13 @@ int net_socket_requestFile(void* priv, const char* request,
 	fseek(f, (long) 0, SEEK_END);
 	int size = (int) ftell(f);
 	fseek(f, 0, SEEK_SET);
-	*_size = size;
 
-	char* data = (char*) REALLOC(*_data, size*sizeof(char));
+	char* data = (char*) MALLOC(size*sizeof(char));
 	if(data == NULL)
 	{
-		LOGE("REALLOC failed");
-		goto fail_realloc;
+		LOGE("MALLOC failed");
+		goto fail_malloc;
 	}
-	*_data = data;
 
 	if(fread(data, size, 1, f) != 1)
 	{
@@ -1397,12 +1398,16 @@ int net_socket_requestFile(void* priv, const char* request,
 
 	fclose(f);
 
+	*_data = data;
+	*_size = size;
+
 	// success
 	return 1;
 
 	// failure
 	fail_fread:
-	fail_realloc:
+		FREE(data);
+	fail_malloc:
 		fclose(f);
 	return 0;
 }
