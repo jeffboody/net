@@ -100,7 +100,8 @@ static void* net_httpd_http(void* arg)
 		while((close == 0) && (count_ok < 256))
 		{
 			LOGD("[HTTP] wserve a=%p", a);
-			if(net_socket_wserve(a, 0, (void*) &tid,
+			if(net_socket_wserve(a, tid, 0,
+			                     self->request_priv,
 			                     self->request_fn,
 			                     &close) == 0)
 			{
@@ -197,6 +198,7 @@ static void* net_httpd_httpd(void* arg)
 
 net_httpd_t*
 net_httpd_new(int nth, net_listenInfo_t* info,
+              void* request_priv,
               net_socket_requestFn request_fn)
 {
 	ASSERT(nth > 0);
@@ -212,8 +214,9 @@ net_httpd_new(int nth, net_listenInfo_t* info,
 		return NULL;
 	}
 
-	self->nth        = nth;
-	self->request_fn = request_fn;
+	self->nth          = nth;
+	self->request_priv = request_priv;
+	self->request_fn   = request_fn;
 
 	size_t size = strlen(info->port) + 1;
 	char*  port = (char*) MALLOC(size);

@@ -59,7 +59,8 @@
 #define NET_SOCKET_FLAG_SSL_CONNECT_INSECURE 0x2000
 #define NET_SOCKET_FLAG_SSL_LISTEN_ANYONE    0x4000
 
-typedef int (*net_socket_requestFn)(void* priv,
+typedef int (*net_socket_requestFn)(int tid,
+                                    void* request_priv,
                                     const char* request,
                                     int* _size,
                                     void** _data);
@@ -133,11 +134,13 @@ int           net_socket_wget(net_socket_t* self,
                               const char* request,
                               int close, int* _status,
                               int* _size, void** _data);
-int           net_socket_wserve(net_socket_t* self, int chunked,
+int           net_socket_wserve(net_socket_t* self,
+                                int tid, int chunked,
                                 void* request_priv,
                                 net_socket_requestFn request_fn,
                                 int* close);
-int           net_socket_requestFile(void* priv,
+int           net_socket_requestFile(int tid,
+                                     void* request_priv,
                                      const char* request,
                                      int* _size,
                                      void** _data);

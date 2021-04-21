@@ -1279,13 +1279,14 @@ int net_socket_wget(net_socket_t* self,
 	return 0;
 }
 
-int net_socket_wserve(net_socket_t* self, int chunked,
+int net_socket_wserve(net_socket_t* self,
+                      int tid, int chunked,
                       void* request_priv,
                       net_socket_requestFn request_fn,
                       int* close)
 {
-	// request_fn may be NULL
 	ASSERT(self);
+	ASSERT(request_fn);
 	ASSERT(close);
 
 	if(chunked)
@@ -1307,21 +1308,11 @@ int net_socket_wserve(net_socket_t* self, int chunked,
 	}
 
 	// get the request data
-	int   ok;
 	int   size = 0;
 	char* data = NULL;
-	if(request_fn)
-	{
-		ok = (*request_fn)(request_priv, request.request,
-		                   &size, (void**) &data);
-	}
-	else
-	{
-		ok = net_socket_requestFile(NULL, request.request,
-		                            &size, (void**) &data);
-	}
-
-	if(ok == 0)
+	if((*request_fn)(tid, request_priv,
+	                 request.request,
+	                 &size, (void**) &data) == 0)
 	{
 		goto fail_data;
 	}
@@ -1357,10 +1348,11 @@ int net_socket_wserve(net_socket_t* self, int chunked,
 	return 0;
 }
 
-int net_socket_requestFile(void* priv, const char* request,
+int net_socket_requestFile(int tid, void* request_priv,
+                           const char* request,
                            int* _size, void** _data)
 {
-	ASSERT(priv == NULL);
+	ASSERT(request_priv == NULL);
 	ASSERT(request);
 	ASSERT(_size);
 	ASSERT(_data);

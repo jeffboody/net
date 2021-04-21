@@ -63,7 +63,8 @@ int main(int argc, const char** argv)
 	};
 
 	net_httpd_t* httpd;
-	httpd = net_httpd_new(1, &info, net_socket_requestFile);
+	httpd = net_httpd_new(1, &info, NULL,
+	                      net_socket_requestFile);
 	if(httpd == NULL)
 	{
 		return EXIT_FAILURE;

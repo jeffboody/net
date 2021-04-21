@@ -55,7 +55,7 @@ int main(int argc, const char** argv)
 	}
 
 	int close = 0;
-	if(net_socket_wserve(a, 0, NULL, NULL, &close) == 0)
+	if(net_socket_wserve(a, 0, 0, NULL, NULL, &close) == 0)
 	{
 		goto fail_serve;
 	}

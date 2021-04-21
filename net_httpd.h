@@ -35,6 +35,7 @@ typedef struct
 	int                  tid;
 	int                  nth;
 	net_listenInfo_t     info;
+	void*                request_priv;
 	net_socket_requestFn request_fn;
 	cc_list_t*           http_socks;
 	pthread_mutex_t      http_mutex;
@@ -45,6 +46,7 @@ typedef struct
 
 net_httpd_t* net_httpd_new(int nth,
                            net_listenInfo_t* info,
+                           void* request_priv,
                            net_socket_requestFn request_fn);
 void         net_httpd_delete(net_httpd_t** _self);
 void         net_httpd_start(net_httpd_t* self);
