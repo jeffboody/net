@@ -49,6 +49,6 @@ net_httpd_t* net_httpd_new(int nth,
                            void* request_priv,
                            net_socket_requestFn request_fn);
 void         net_httpd_delete(net_httpd_t** _self);
-void         net_httpd_start(net_httpd_t* self);
+void         net_httpd_start(net_httpd_t* self, int blocking);
 
 #endif

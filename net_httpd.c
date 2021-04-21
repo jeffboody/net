@@ -389,7 +389,7 @@ void net_httpd_delete(net_httpd_t** _self)
 	}
 }
 
-void net_httpd_start(net_httpd_t* self)
+void net_httpd_start(net_httpd_t* self, int blocking)
 {
 	ASSERT(self);
 
@@ -398,7 +398,10 @@ void net_httpd_start(net_httpd_t* self)
 	pthread_cond_broadcast(&self->http_cond);
 	pthread_mutex_unlock(&self->http_mutex);
 
-	// threads never exit once started
-	// so this function never returns
-	pthread_join(self->httpd_thread, NULL);
+	if(blocking)
+	{
+		// threads never exit once started
+		// so this function never returns
+		pthread_join(self->httpd_thread, NULL);
+	}
 }

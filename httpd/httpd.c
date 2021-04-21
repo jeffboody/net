@@ -69,5 +69,5 @@ int main(int argc, const char** argv)
 	{
 		return EXIT_FAILURE;
 	}
-	net_httpd_start(httpd);
+	net_httpd_start(httpd, 1);
 }
