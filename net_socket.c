@@ -1019,17 +1019,19 @@ int net_socket_flush(net_socket_t* self)
 }
 
 int net_socket_recv(net_socket_t* self, void* data,
-                    int len, int* recvd)
+                    int len, int* _recvd)
 {
 	ASSERT(self);
 	ASSERT(data);
-	ASSERT(recvd);
+	ASSERT(_recvd);
 
-	int count = 0;
+	*_recvd = 0;
+
+	int recvd = 0;
 	if((self->flags & NET_SOCKET_FLAG_SSL) == 0)
 	{
-		count = recv(self->sockfd, data, len, 0);
-		if(count == -1)
+		recvd = recv(self->sockfd, data, len, 0);
+		if(recvd == -1)
 		{
 			if(self->error == 0)
 			{
@@ -1037,10 +1039,9 @@ int net_socket_recv(net_socket_t* self, void* data,
 			}
 			self->error     = 1;
 			self->connected = 0;
-			*recvd          = 0;
 			return 0;
 		}
-		else if(count == 0)
+		else if(recvd == 0)
 		{
 			// connection closed normally
 			self->connected = 0;
@@ -1050,14 +1051,15 @@ int net_socket_recv(net_socket_t* self, void* data,
 	else
 	{
 		net_socketSSL_t* self_ssl = (net_socketSSL_t*) self;
-		count = SSL_read(self_ssl->ssl, data, len);
-		if(count <= 0)
+		recvd = SSL_read(self_ssl->ssl, data, len);
+		if(recvd <= 0)
 		{
 			if(SSL_get_error(self_ssl->ssl,
-			                 count) == SSL_ERROR_ZERO_RETURN)
+			                 recvd) == SSL_ERROR_ZERO_RETURN)
 			{
 				// connection closed normally
 				self->connected = 0;
+				recvd           = 0;
 			}
 			else
 			{
@@ -1067,90 +1069,45 @@ int net_socket_recv(net_socket_t* self, void* data,
 				}
 				self->error     = 1;
 				self->connected = 0;
-				*recvd          = 0;
 				return 0;
 			}
 		}
 	}
 	#endif
-	*recvd = count;
+	*_recvd = recvd;
 	return 1;
 }
 
 int net_socket_recvall(net_socket_t* self, void* data,
-                       int len, int* recvd)
+                       int len, int* _recvd)
 {
 	ASSERT(self);
 	ASSERT(data);
-	ASSERT(recvd);
+	ASSERT(_recvd);
 
-	int left  = len;
-	void* buf = data;
-	if((self->flags & NET_SOCKET_FLAG_SSL) == 0)
-	{
-		while(left > 0)
-		{
-			int count = recv(self->sockfd, buf, left, 0);
-			if(count == -1)
-			{
-				if(self->error == 0)
-				{
-					LOGD("recv failed");
-				}
-				self->error = 1;
-				goto fail_recv;
-			}
-			else if(count == 0)
-			{
-				if(self->connected == 1)
-				{
-					LOGD("recv closed");
-				}
-				goto fail_recv;
-			}
-			left = left - count;
-			buf  = buf + count;
-		}
-	}
-	#ifdef NET_SOCKET_USE_SSL
-	else
-	{
-		net_socketSSL_t* self_ssl = (net_socketSSL_t*) self;
+	*_recvd = 0;
 
-		int count = SSL_read(self_ssl->ssl, buf, left);
-		if(count <= 0)
+	int   recvd = 0;
+	int   left  = len;
+	void* buf   = data;
+	while(left > 0)
+	{
+		if(net_socket_recv(self, buf, left, &recvd) == 0)
 		{
-			if(SSL_get_error(self_ssl->ssl,
-			                 count) == SSL_ERROR_ZERO_RETURN)
-			{
-				if(self->connected == 1)
-				{
-					LOGD("SSL_read closed");
-				}
-			}
-			else
-			{
-				if(self->error == 0)
-				{
-					LOGD("SSL_read failed");
-				}
-				self->error = 1;
-			}
 			goto fail_recv;
 		}
-		left = left - count;
-		buf  = buf + count;
+		left     = left - recvd;
+		buf      = buf + recvd;
+		*_recvd += recvd;
 	}
-	#endif
 
 	// success
-	*recvd = len;
 	return 1;
 
 	// failure
 	fail_recv:
 		self->connected = 0;
-		*recvd          = len - left;
+		*_recvd         = len - left;
 	return 0;
 }
 
