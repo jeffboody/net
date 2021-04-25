@@ -329,7 +329,7 @@ net_httpd_new(int nth, net_listenInfo_t* info,
 		pthread_mutex_unlock(&self->http_mutex);
 
 		int i;
-		for(i = 0; i < t; --i)
+		for(i = 0; i < t; ++i)
 		{
 			pthread_join(self->http_thread[i], NULL);
 		}
@@ -371,7 +371,7 @@ void net_httpd_delete(net_httpd_t** _self)
 		pthread_join(self->httpd_thread, NULL);
 
 		int i;
-		for(i = 0; i < self->nth; --i)
+		for(i = 0; i < self->nth; ++i)
 		{
 			pthread_join(self->http_thread[i], NULL);
 		}
