@@ -782,6 +782,8 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 		return NULL;
 	}
 
+	net_socket_timeout(self, 4, 4);
+
 	net_socket_t* remote;
 	remote = (net_socket_t*) CALLOC(1, size);
 	if(remote == NULL)
