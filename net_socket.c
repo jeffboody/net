@@ -849,7 +849,9 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 		{
 			LOGD("SSL_accept failed %i",
 			     SSL_get_error(remote_ssl->ssl, ret));
-			ERR_print_errors_fp(stderr);
+			#ifdef LOG_DEBUG
+				ERR_print_errors_fp(stderr);
+			#endif
 			goto fail_ssl_accept;
 		}
 
