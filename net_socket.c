@@ -782,8 +782,6 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 		return NULL;
 	}
 
-	net_socket_timeout(self, 4, 4);
-
 	net_socket_t* remote;
 	remote = (net_socket_t*) CALLOC(1, size);
 	if(remote == NULL)
@@ -830,6 +828,9 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 		remote_ssl->ctx    = self_ssl->ctx;
 		remote_ssl->method = NET_SOCKETSSL_METHOD_ACCEPT;
 
+		// set timeout for SSL handshake
+		net_socket_timeout(self, 4, 4);
+
 		// init ssl
 		remote_ssl->ssl = SSL_new(remote_ssl->ctx);
 		if(remote_ssl->ssl == NULL)
@@ -863,6 +864,9 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 				goto fail_ssl_verify;
 			}
 		}
+
+		// restore default timeout
+		net_socket_timeout(self, 0, 0);
 	}
 	#endif
 
