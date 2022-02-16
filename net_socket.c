@@ -829,7 +829,7 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 		remote_ssl->method = NET_SOCKETSSL_METHOD_ACCEPT;
 
 		// set timeout for SSL handshake
-		net_socket_timeout(self, 4, 4);
+		net_socket_timeout(remote, 4, 4);
 
 		// init ssl
 		remote_ssl->ssl = SSL_new(remote_ssl->ctx);
@@ -866,7 +866,7 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 		}
 
 		// restore default timeout
-		net_socket_timeout(self, 0, 0);
+		net_socket_timeout(remote, 0, 0);
 	}
 	#endif
 
