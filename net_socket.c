@@ -31,6 +31,7 @@
 #ifdef NET_SOCKET_USE_SSL
 	#include <openssl/err.h>
 	#include <openssl/ssl.h>
+	#include <openssl/x509v3.h>
 #endif
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -73,6 +74,102 @@ typedef struct
 	SSL_CTX* ctx;
 	SSL*     ssl;
 } net_socketSSL_t;
+
+static int
+post_connection_check(SSL* ssl, char* host)
+{
+	ASSERT(ssl);
+	ASSERT(host);
+
+	// Based on Network Security with OpenSSL
+
+	X509* cert = SSL_get_peer_certificate(ssl);
+	if(cert == NULL)
+	{
+		LOGD("SSL_get_peer_certificate failed");
+		return X509_V_ERR_APPLICATION_VERIFICATION;
+	}
+
+	int extcount = X509_get_ext_count(cert);
+
+	// check the DNS name field if found
+	int i;
+	int ok = 0;
+	for(i = 0; i < extcount; i++)
+	{
+		X509_EXTENSION* ext    = X509_get_ext(cert, i);
+		const char*     extstr = OBJ_nid2sn(OBJ_obj2nid(X509_EXTENSION_get_object(ext)));
+
+		if(!strcmp(extstr, "subjectAltName"))
+		{
+			const X509V3_EXT_METHOD* meth;
+			meth = X509V3_EXT_get(ext);
+			if(meth == NULL)
+			{
+				break;
+			}
+
+			ASN1_OCTET_STRING* data = X509_EXTENSION_get_data(ext);
+
+			const unsigned char* str = ASN1_STRING_get0_data(data);
+
+			int length = ASN1_STRING_length(data);
+
+			STACK_OF(CONF_VALUE)* val;
+			val = meth->i2v(meth, meth->d2i(NULL, &str, length), NULL);
+
+			int j;
+			for(j = 0; j < sk_CONF_VALUE_num(val); j++)
+			{
+				CONF_VALUE* nval;
+				nval = sk_CONF_VALUE_value(val, j);
+				if((strcmp(nval->name, "DNS") == 0) &&
+				   (strcmp(nval->value, host) == 0))
+				{
+					ok = 1;
+					break;
+				}
+			}
+		}
+
+		if(ok)
+		{
+			break;
+		}
+	}
+
+	// check common name (CN) for backwards compatibility
+	char data[256];
+	X509_NAME* subj = X509_get_subject_name(cert);
+	if((ok == 0) && subj &&
+	   (X509_NAME_get_text_by_NID(subj, NID_commonName,
+	                              data, 256) > 0))
+	{
+		data[255] = 0;
+		if(strcasecmp(data, host) != 0)
+		{
+			LOGD("common name failed");
+			goto fail_cn;
+		}
+	}
+
+	if(SSL_get_verify_result(ssl) != X509_V_OK)
+	{
+		LOGD("SSL_get_verify_result failed");
+		goto fail_verify;
+	}
+
+	X509_free(cert);
+
+	// success
+	return X509_V_OK;
+
+	// failure
+	fail_verify:
+	fail_cn:
+		X509_free(cert);
+	return X509_V_ERR_APPLICATION_VERIFICATION;
+}
 
 #endif
 
@@ -153,6 +250,7 @@ sendall(net_socket_t* self, const void* data, int len,
 
 static int
 net_socket_connectTimeout(net_socket_t* self,
+                          net_connectInfo_t* info,
                           struct addrinfo* i)
 {
 	ASSERT(self);
@@ -236,9 +334,11 @@ net_socket_connectTimeout(net_socket_t* self,
 
 		if((self->flags & NET_SOCKET_FLAG_SSL_CONNECT_INSECURE) == 0)
 		{
-			if(SSL_get_verify_result(self_ssl->ssl) != X509_V_OK)
+			char addr[256];
+			snprintf(addr, 256, "%s", info->addr);
+			if(post_connection_check(self_ssl->ssl,
+			                         addr) != X509_V_OK)
 			{
-				LOGD("SSL_get_verify_result failed");
 				goto fail_ssl_verify;
 			}
 		}
@@ -474,7 +574,7 @@ net_socket_connect(net_connectInfo_t* info)
 			}
 		}
 
-		if(net_socket_connectTimeout(self, i) == 0)
+		if(net_socket_connectTimeout(self, info, i) == 0)
 		{
 			close(self->sockfd);
 			self->sockfd = -1;
@@ -858,6 +958,11 @@ net_socket_t* net_socket_accept(net_socket_t* self)
 
 		if((remote->flags & NET_SOCKET_FLAG_SSL_LISTEN_ANYONE) == 0)
 		{
+			// Per Network Security with OpenSSL
+			// post_connection_check can also be used here however
+			// the client FQDN (fully qualified domain name) may not
+			// be readily available and must use the IP address to
+			// discover the FQDN
 			if(SSL_get_verify_result(remote_ssl->ssl) != X509_V_OK)
 			{
 				LOGD("SSL_get_verify_result failed");
