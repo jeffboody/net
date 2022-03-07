@@ -90,67 +90,27 @@ post_connection_check(SSL* ssl, char* host)
 		return X509_V_ERR_APPLICATION_VERIFICATION;
 	}
 
-	int extcount = X509_get_ext_count(cert);
-
-	// check the DNS name field if found
-	int i;
-	int ok = 0;
-	for(i = 0; i < extcount; i++)
+	X509_NAME* subj = X509_get_subject_name(cert);
+	if(subj == NULL)
 	{
-		X509_EXTENSION* ext    = X509_get_ext(cert, i);
-		const char*     extstr = OBJ_nid2sn(OBJ_obj2nid(X509_EXTENSION_get_object(ext)));
-
-		if(!strcmp(extstr, "subjectAltName"))
-		{
-			const X509V3_EXT_METHOD* meth;
-			meth = X509V3_EXT_get(ext);
-			if(meth == NULL)
-			{
-				break;
-			}
-
-			ASN1_OCTET_STRING* data = X509_EXTENSION_get_data(ext);
-
-			const unsigned char* str = ASN1_STRING_get0_data(data);
-
-			int length = ASN1_STRING_length(data);
-
-			STACK_OF(CONF_VALUE)* val;
-			val = meth->i2v(meth, meth->d2i(NULL, &str, length), NULL);
-
-			int j;
-			for(j = 0; j < sk_CONF_VALUE_num(val); j++)
-			{
-				CONF_VALUE* nval;
-				nval = sk_CONF_VALUE_value(val, j);
-				if((strcmp(nval->name, "DNS") == 0) &&
-				   (strcmp(nval->value, host) == 0))
-				{
-					ok = 1;
-					break;
-				}
-			}
-		}
-
-		if(ok)
-		{
-			break;
-		}
+		LOGD("X509_get_subject_name failed");
+		goto fail_subj;
 	}
 
-	// check common name (CN) for backwards compatibility
-	char data[256];
-	X509_NAME* subj = X509_get_subject_name(cert);
-	if((ok == 0) && subj &&
-	   (X509_NAME_get_text_by_NID(subj, NID_commonName,
-	                              data, 256) > 0))
+	// get common name (CN)
+	char cn[256];
+	if(X509_NAME_get_text_by_NID(subj, NID_commonName,
+	                             cn, 256) == -1)
 	{
-		data[255] = 0;
-		if(strcasecmp(data, host) != 0)
-		{
-			LOGD("common name failed");
-			goto fail_cn;
-		}
+		LOGD("X509_NAME_get_text_by_NID failed");
+		goto fail_get_cn;
+	}
+
+	// check common name (CN)
+	if(strcasecmp(cn, host) != 0)
+	{
+		LOGD("common name failed");
+		goto fail_check_cn;
 	}
 
 	if(SSL_get_verify_result(ssl) != X509_V_OK)
@@ -166,7 +126,9 @@ post_connection_check(SSL* ssl, char* host)
 
 	// failure
 	fail_verify:
-	fail_cn:
+	fail_check_cn:
+	fail_get_cn:
+	fail_subj:
 		X509_free(cert);
 	return X509_V_ERR_APPLICATION_VERIFICATION;
 }
