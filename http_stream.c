@@ -479,7 +479,7 @@ void http_stream_writeError(http_stream_t* self,
 	         err, reason);
 	header[255] = '\0';
 
-	int len = strlen(header) + 1;
+	int len = strlen(header);
 
 	net_socket_sendall(self->sock, header, len);
 	net_socket_flush(self->sock);
