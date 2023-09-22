@@ -24,6 +24,8 @@
 #ifndef net_socket_H
 #define net_socket_H
 
+#include <sys/socket.h>
+
 // type
 // Note that TCP uses Nagle's algorithm to buffer data until
 // ACK is received.
@@ -33,9 +35,9 @@
 #define NET_SOCKET_TYPE_MAX 2
 
 // shutdown "how"
-#define NET_SOCKET_HOW_SHUT_RD   0
-#define NET_SOCKET_HOW_SHUT_WR   1
-#define NET_SOCKET_HOW_SHUT_RDWR 2
+#define NET_SOCKET_HOW_SHUT_RD   SHUT_RD
+#define NET_SOCKET_HOW_SHUT_WR   SHUT_WR
+#define NET_SOCKET_HOW_SHUT_RDWR SHUT_RDWR
 
 // flags
 // Note that FLAG_TCP_NODELAY causes send data to be sent
